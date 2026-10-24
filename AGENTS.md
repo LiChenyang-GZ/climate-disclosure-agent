@@ -11,7 +11,7 @@ You are implementing one task of Climate Disclosure Agent. Read, in order:
 2. Change only the files listed under **Files**. Creating a test file next to a listed module is allowed.
 3. Write the failing tests first, then the implementation. Every failure case listed in the spec gets its own test.
 4. Tests never call a real model or any paid API. Use `cda.llm.fake` (or a stub, before it exists).
-5. Never edit `specs/`, `AGENTS.md`, `CLAUDE.md`, `.github/`, `.codex/`, `docs/`. The workflow reverts such changes.
+5. Never edit `specs/`, `AGENTS.md`, `CLAUDE.md`, `.github/`, `.codex/`, `docs/`. Such changes are reverted before review.
 6. If the spec is unclear, implement the most conservative reading and list it under "Uncertain" in your summary. Do not widen scope.
 7. Only add dependencies from the stack table in `specs/02-design.md` §1, plus what the task lists.
 8. Before finishing, run `uv run ruff check .`, `uv run ruff format --check .`, `uv run mypy src`, `uv run pytest -q`, and fix failures.

@@ -1,10 +1,9 @@
 name: codex-task
 
-# Push a branch named task/TNN to run Codex on specs/tasks/TNN.md.
-# Push .codex/feedback.md to the same branch to have Codex address review feedback.
+# Manual fallback only: tasks normally run locally (see CLAUDE.md).
+# To use it, run this workflow from the Actions tab on a branch named task/TNN.
 on:
-  push:
-    branches: ["task/**"]
+  workflow_dispatch:
 
 concurrency:
   group: codex-${{ github.ref }}
