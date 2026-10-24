@@ -1,6 +1,6 @@
 # Task plan
 
-Implementation is split into small tasks. Each task is one module plus its tests, run by Codex in a fresh session (see `AGENTS.md`). Detailed task specs are written just before each batch starts, so lessons from earlier batches carry forward.
+Implementation is split into small tasks. Each task is one module plus its tests, run by Codex in a fresh session (see `AGENTS.md`). The detailed spec for each task (`specs/tasks/TNN.md`, from `_template.md`) is written just before its batch starts, so lessons from earlier batches carry forward. The table at the end lists the libraries and decisions each task must follow, so a spec can be written without re-reading the whole design.
 
 - **Model**: `luna` = gpt-6-luna (cheap), `sol` = gpt-6.1-sol (strong).
 - **Tier**: `strict` = reviewed line by line, every failure case must have a test; `normal` = reviewed via summary, diff and CI.
@@ -35,6 +35,37 @@ Implementation is split into small tasks. Each task is one module plus its tests
 | T22 | MCP server (Python, stdio): read-only tools + `start_check`, same permission functions | T08, T20 | luna | normal | codex | 7 |
 | T23 | Real companies: confirm 4 ASX companies, download list, ingest, label evidence (Christy spot-checks 20%) | T06 | — | — | claude + Christy | 6–7 |
 | E1–E6 | Experiments (see decision cards): run against real and synthetic packs, fill results | T18, T23 | luna / sol | — | claude | by 30 Oct |
+
+## Libraries and decisions per task
+
+Section numbers refer to `02-design.md`; D-numbers to its decision digest (§15).
+
+| ID | Libraries | Design | Decisions |
+|---|---|---|---|
+| T00 | uv, fastapi, uvicorn, pydantic-settings, pytest, httpx, ruff, mypy | §1, §3 | — |
+| T01 | docker compose, `pgvector/pgvector:pg16`, sqlalchemy[asyncio], asyncpg, alembic | §2 | D8, D43 |
+| T02 | sqlalchemy, alembic, pgvector (python), testcontainers | §4 | D24, D52, D53, D66 |
+| T03 | pyyaml, pydantic | §7, §10 | D36, D38, D58 |
+| T04 | pymupdf | §5 | D5, D31, D32, D34, D49, D52 |
+| T05 | pymupdf (`find_tables`) | §5 | D33, D62 |
+| T06 | Postgres `tsvector`/`ts_rank_cd`, sentence-transformers (`bge-small-en-v1.5`), pgvector | §5, §6 | D6, D8, D10, D35 |
+| T07 | openai, pydantic, tenacity | §1 models, §7, §8 | D18, D20, D21, D22, D27, D46, D47, D48, D66 |
+| T08 | sqlalchemy | §6 | D11, D28, D29, D58, D60, D62 |
+| T09 | Postgres roles + RLS policies, testcontainers | §4 | D61 |
+| T10 | stdlib only | §7 | D17, D28 |
+| T11 | langgraph | §7 | D2, D12, D14, D15, D30, D39, D40, D58, D59, D67 |
+| T12 | langgraph, langgraph-checkpoint-postgres | §8 | D1, D3, D16, D22, D23, D45 |
+| T13 | stdlib, pydantic | §9 | D41, D42 |
+| T14 | asyncpg (LISTEN/NOTIFY) | §2 | D43, D44, D65 |
+| T15 | reportlab (PDF generation) | §13 | D55, D64, D68 |
+| T16 | pgvector, sentence-transformers | §10 | D7, D36, D37, D63 |
+| T17 | openai via `LLMClient` | §10 | D4, D9 |
+| T18 | pyyaml | §13 | D26, D48, D54, D55, D64 |
+| T19 | GitHub Actions | §13 | D56 |
+| T20 | fastapi, sse-starlette | §11 | D24, D44, D50 |
+| T21 | langfuse | §1 | D25 |
+| T22 | mcp (Python SDK, stdio) | §12 | D13, D51 |
+| T23 | — | §13 | D55 |
 
 ## Phase 2 — after 31 Oct (Claude Code, no OpenAI credits)
 

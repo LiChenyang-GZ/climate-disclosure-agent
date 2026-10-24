@@ -1,0 +1,141 @@
+name: codex-task
+
+# Push a branch named task/TNN to run Codex on specs/tasks/TNN.md.
+# Push .codex/feedback.md to the same branch to have Codex address review feedback.
+on:
+  push:
+    branches: ["task/**"]
+
+concurrency:
+  group: codex-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  codex:
+    # Commits pushed by this workflow use GITHUB_TOKEN and do not re-trigger it.
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      branch: ${{ steps.task.outputs.branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read task
+        id: task
+        run: |
+          branch="${GITHUB_REF#refs/heads/}"
+          task="${branch#task/}"
+          spec="specs/tasks/${task}.md"
+          test -f "$spec" || { echo "::error::$spec not found"; exit 1; }
+          key=$(grep -m1 -oE '\*\*Model\*\*: *(luna|sol)' "$spec" | grep -oE '(luna|sol)$' || echo luna)
+          case "$key" in
+            sol) model="gpt-6.1-sol" ;;
+            *)   model="gpt-6-luna"; key="luna" ;;
+          esac
+          {
+            echo "branch=$branch"; echo "task=$task"; echo "spec=$spec"
+            echo "key=$key"; echo "model=$model"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build prompt
+        run: |
+          {
+            echo "Read AGENTS.md first and follow it exactly."
+            echo "Implement the task in ${{ steps.task.outputs.spec }}."
+            if [ -f .codex/feedback.md ]; then
+              echo "This is a revision. Address every point in .codex/feedback.md; keep the rest of the work."
+            fi
+            echo "Finish with the three-section summary defined in AGENTS.md."
+          } > "$RUNNER_TEMP/prompt.md"
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Pre-install dependencies (Codex sandbox may be offline)
+        run: if [ -f pyproject.toml ]; then uv sync; fi
+
+      - name: Run Codex
+        id: codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: ${{ runner.temp }}/prompt.md
+          output-file: ${{ runner.temp }}/summary.md
+          model: ${{ steps.task.outputs.model }}
+          sandbox: workspace-write
+          codex-args: '["-c", "sandbox_workspace_write.network_access=true"]'
+
+      - name: Revert changes to protected paths
+        run: |
+          protected="specs AGENTS.md CLAUDE.md .github .codex docs"
+          changed=$(git status --porcelain -- $protected | awk '{print $2}')
+          if [ -n "$changed" ]; then
+            echo "Reverting: $changed"
+            git checkout -- $protected 2>/dev/null || true
+            git clean -fdq -- $protected
+            echo "$changed" > "$RUNNER_TEMP/reverted.txt"
+          fi
+
+      - name: Commit and push
+        run: |
+          git config user.name "LiChenyang-GZ"
+          git config user.email "104789004+LiChenyang-GZ@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes from Codex." > "$RUNNER_TEMP/nochange.txt"
+          else
+            git commit -q -m "${{ steps.task.outputs.task }}: $(head -1 ${{ steps.task.outputs.spec }} | sed 's/^# //')"
+            git push origin "HEAD:${{ steps.task.outputs.branch }}"
+          fi
+
+      - name: Tests and usage
+        run: |
+          {
+            echo "### Codex run · ${{ steps.task.outputs.task }}"
+            echo
+            python3 .github/scripts/codex_usage.py "${{ steps.task.outputs.key }}"
+            echo
+            [ -f "$RUNNER_TEMP/nochange.txt" ] && echo "**Codex made no changes.**"
+            [ -f "$RUNNER_TEMP/reverted.txt" ] && echo "**Reverted edits to protected paths:** $(cat $RUNNER_TEMP/reverted.txt | tr '\n' ' ')"
+            echo
+            echo "<details><summary>Test output</summary>"
+            echo
+            echo '```'
+            if [ -f pyproject.toml ]; then
+              (uv sync -q && uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest -q) 2>&1 | tail -40 || true
+            else
+              echo "no pyproject.toml"
+            fi
+            echo '```'
+            echo "</details>"
+          } > "$RUNNER_TEMP/comment.md"
+
+      - name: Open or update PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch="${{ steps.task.outputs.branch }}"
+          body="$RUNNER_TEMP/summary.md"
+          [ -s "$body" ] || echo "Codex produced no summary." > "$body"
+          pr=$(gh pr list --head "$branch" --state open --json number -q '.[0].number')
+          if [ -z "$pr" ]; then
+            gh pr create --base main --head "$branch" \
+              --title "${{ steps.task.outputs.task }}: $(head -1 ${{ steps.task.outputs.spec }} | sed 's/^# [^·]*· //')" \
+              --body-file "$body"
+            pr=$(gh pr list --head "$branch" --state open --json number -q '.[0].number')
+          else
+            { echo "## Revision summary"; echo; cat "$body"; } > "$RUNNER_TEMP/rev.md"
+            gh pr comment "$pr" --body-file "$RUNNER_TEMP/rev.md"
+          fi
+          gh pr comment "$pr" --body-file "$RUNNER_TEMP/comment.md"
+
+  ci:
+    needs: codex
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.codex.outputs.branch }}
