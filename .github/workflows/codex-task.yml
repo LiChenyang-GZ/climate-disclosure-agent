@@ -59,6 +59,37 @@ jobs:
       - name: Pre-install dependencies (Codex sandbox may be offline)
         run: if [ -f pyproject.toml ]; then uv sync; fi
 
+      # codex-action@v1 rejects permission overrides in `codex-args` (e.g.
+      # sandbox_workspace_write.network_access). Network access is granted instead
+      # through a named permission profile defined in a trusted CODEX_HOME config,
+      # written here by the workflow (never read from the checkout).
+      - name: Write Codex permission profile
+        run: |
+          mkdir -p "$RUNNER_TEMP/codex-home"
+          cat > "$RUNNER_TEMP/codex-home/config.toml" <<'EOF'
+          [features]
+          network_proxy = true
+
+          # :workspace = write inside the checkout and system temp dirs only.
+          [permissions.workspace-net]
+          extends = ":workspace"
+
+          [permissions.workspace-net.network]
+          enabled = true
+
+          # Only package registries, so `uv sync` / `uv lock` work inside Codex.
+          [permissions.workspace-net.network.domains]
+          "pypi.org" = "allow"
+          "files.pythonhosted.org" = "allow"
+          "github.com" = "allow"
+          "objects.githubusercontent.com" = "allow"
+          "release-assets.githubusercontent.com" = "allow"
+
+          # uv's default cache (~/.cache/uv) is outside the writable workspace.
+          [shell_environment_policy]
+          set = { UV_CACHE_DIR = "/tmp/uv-cache" }
+          EOF
+
       - name: Run Codex
         id: codex
         uses: openai/codex-action@v1
@@ -67,8 +98,8 @@ jobs:
           prompt-file: ${{ runner.temp }}/prompt.md
           output-file: ${{ runner.temp }}/summary.md
           model: ${{ steps.task.outputs.model }}
-          sandbox: workspace-write
-          codex-args: '["-c", "sandbox_workspace_write.network_access=true"]'
+          codex-home: ${{ runner.temp }}/codex-home
+          permission-profile: workspace-net
 
       - name: Revert changes to protected paths
         run: |

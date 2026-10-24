@@ -13,8 +13,11 @@ Christy owns this project. Claude designs, writes task specs, reviews Codex's PR
 3. Wait for the PR. Read the PR body, the bot comment (tests + token usage + cost) and the CI checks.
 4. Review with Claude Code's built-in code review. `strict` tier: line by line, check every failure case has a test. `normal` tier: summary, diff, CI.
 5. Changes needed: write `.codex/feedback.md` on the branch and push (re-triggers Codex). At most 2 send-backs; after that Claude fixes it directly or splits the task.
-6. Approved: squash-merge, delete `.codex/feedback.md`, write the learning card in Christy's notes, add the cost to the spend log.
-7. Work in batches (`specs/03-tasks.md`); stop after each batch and report: tasks done, OpenAI spend (batch / total / remaining vs $25 coding budget), next batch and estimate, decisions needed.
+6. Approved:
+   - `normal` tier: Claude squash-merges.
+   - `strict` tier: do not merge yet. Post a 3-line summary in Chinese to Christy (做了什么 / 怎么测的 / 剩下什么风险) and wait for her "可以" before squash-merging.
+   - After merging: delete `.codex/feedback.md`, write the learning card in Christy's notes, add the cost to the spend log.
+7. Work in batches (`specs/03-tasks.md`); stop after each batch and report: tasks done, OpenAI spend (batch / total / remaining vs $25 coding budget), next batch and estimate, decisions needed, and every "Uncertain" item from the batch's PR summaries translated into Chinese. Strict-tier PRs awaiting Christy's approval are listed first.
 
 ## Fixed rules
 - Commits are authored as `LiChenyang-GZ <104789004+LiChenyang-GZ@users.noreply.github.com>`. No `Co-Authored-By` lines; Claude and Codex must not appear as contributors.
