@@ -17,12 +17,15 @@ async def corpus(db, rows):
     doc = rows["document"]
     await db.execute(update(Document).where(Document.id == doc).values(filename="climatefile.pdf"))
     ids = [rows["unit"]]
-    for kind, body in [
-        ("section", "Scope emissions"),
-        ("paragraph", "Scope 1 emissions Scope 1 emissions"),
-        ("table", "Scope emissions"),
-        ("table_row", "board remuneration"),
-    ]:
+    for seq, (kind, body) in enumerate(
+        [
+            ("section", "Scope emissions"),
+            ("paragraph", "Scope 1 emissions Scope 1 emissions"),
+            ("table", "Scope emissions"),
+            ("table_row", "board remuneration"),
+        ],
+        start=1,
+    ):
         uid = uuid4()
         ids.append(uid)
         await db.execute(
@@ -31,6 +34,7 @@ async def corpus(db, rows):
                 document_id=doc,
                 kind=kind,
                 pdf_page=1,
+                seq=seq,
                 section_path="Governance",
                 text=body,
                 parser_version="v1",
@@ -114,6 +118,7 @@ async def test_vector_nearest_and_unembedded(db, corpus):
             document_id=doc,
             kind="paragraph",
             pdf_page=1,
+            seq=5,
             section_path="",
             text="board remuneration",
             parser_version="v1",

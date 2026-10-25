@@ -220,6 +220,7 @@ class Unit(Base):
         PGUUID(as_uuid=True), ForeignKey("units.id", ondelete="RESTRICT"), nullable=True
     )
     kind: Mapped[UnitKind] = mapped_column(Text(), nullable=False)
+    seq: Mapped[int] = mapped_column(Integer(), nullable=False)
     pdf_page: Mapped[int] = mapped_column(Integer(), nullable=False)
     page_half: Mapped[PageHalf | None] = mapped_column(Text(), nullable=True)
     printed_page: Mapped[str | None] = mapped_column(Text(), nullable=True)
@@ -242,6 +243,8 @@ class Unit(Base):
     __table_args__ = (
         CheckConstraint(_allowed_values("kind", UNIT_KINDS), name="ck_units_kind"),
         CheckConstraint(_allowed_values("page_half", PAGE_HALVES), name="ck_units_page_half"),
+        CheckConstraint("seq >= 0", name="ck_units_seq"),
+        UniqueConstraint("document_id", "seq", name="uq_units_document_id_seq"),
         CheckConstraint("pdf_page >= 1", name="ck_units_pdf_page"),
         CheckConstraint("char_length(text) > 0", name="ck_units_text"),
         CheckConstraint("token_count >= 0", name="ck_units_token_count"),
