@@ -34,13 +34,14 @@ async def ingest_pdf(
         ).scalar_one()
         unit_ids = {unit.key: uuid4() for unit in parsed.units}
         rows = []
-        for unit in parsed.units:
+        for seq, unit in enumerate(parsed.units):
             values = asdict(unit)
             key = values.pop("key")
             parent = values.pop("parent_key")
             rows.append(
                 dict(
                     **values,
+                    seq=seq,
                     id=unit_ids[key],
                     document_id=document_id,
                     parent_id=unit_ids[parent] if parent else None,

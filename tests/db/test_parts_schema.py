@@ -54,16 +54,16 @@ async def test_half_constraint(db, rows):
         async with db.begin_nested():
             await db.execute(
                 text(
-                    "INSERT INTO units(document_id,kind,pdf_page,page_half,section_path,text,parser_version) VALUES (:document,'paragraph',1,'middle','','body','v1')"
+                    "INSERT INTO units(seq,document_id,kind,pdf_page,page_half,section_path,text,parser_version) VALUES (1,:document,'paragraph',1,'middle','','body','v1')"
                 ),
                 rows,
             )
     for half in [None, "left"]:
         await db.execute(
             text(
-                "INSERT INTO units(document_id,kind,pdf_page,page_half,section_path,text,parser_version) VALUES (:document,'paragraph',1,:half,'','body','v1')"
+                "INSERT INTO units(seq,document_id,kind,pdf_page,page_half,section_path,text,parser_version) VALUES (:seq,:document,'paragraph',1,:half,'','body','v1')"
             ),
-            dict(rows, half=half),
+            dict(rows, half=half, seq=1 if half is None else 2),
         )
 
 

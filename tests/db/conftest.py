@@ -34,7 +34,7 @@ async def rows(db: AsyncConnection) -> dict[str, object]:
         "team": "INSERT INTO teams(name) VALUES ('Test') RETURNING id",
         "pack": "INSERT INTO packs(company, reporting_year, team_id, created_by) VALUES ('Test', 2025, :team, :user) RETURNING id",
         "document": "INSERT INTO documents(pack_id, kind, filename, sha256, page_count, parser_version) VALUES (:pack, 'annual', 'a.pdf', repeat('a',64), 1, 'v1') RETURNING id",
-        "unit": "INSERT INTO units(document_id, kind, pdf_page, section_path, text, token_count, parser_version) VALUES (:document, 'paragraph', 1, 'Climate', 'Scope 1 emissions', 3, 'v1') RETURNING id",
+        "unit": "INSERT INTO units(seq, document_id, kind, pdf_page, section_path, text, token_count, parser_version) VALUES (0, :document, 'paragraph', 1, 'Climate', 'Scope 1 emissions', 3, 'v1') RETURNING id",
         "checks": "INSERT INTO check_sets(version, yaml_sha256) VALUES ('v1', repeat('b',64)) RETURNING version",
         "run": "INSERT INTO runs(pack_id, method, model_key, check_set_version, prompt_sha256, budget_usd, status, idempotency_key, created_by) VALUES (:pack, 'A', 'fake', :checks, repeat('c',64), 1, 'queued', 'key', :user) RETURNING id",
         "finding": "INSERT INTO findings(run_id, check_id, status, rationale, steps, cost_usd) VALUES (:run, 'C1', 'evidence_found', 'Found', 1, 0) RETURNING id",
