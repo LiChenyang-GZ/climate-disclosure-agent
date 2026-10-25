@@ -14,6 +14,8 @@ from cda.tools.list_documents import ListDocumentsArgs, list_documents
 from cda.tools.read_unit import ReadUnitArgs, read_unit
 from cda.tools.semantic_search import semantic_search
 
+_ASYNC_GRACE_S = 1.0
+
 
 @dataclass(frozen=True)
 class ToolDef:
@@ -61,10 +63,22 @@ async def run_tool(ctx: ToolContext, name: str, raw_args: dict[str, Any]) -> Too
         return bad_args("Invalid arguments" + (": " + ", ".join(fields) if fields else "") + ".")
     if name == "semantic_search" and ctx.embedder is None:
         return bad_args("Semantic search not available.")
-    task = asyncio.ensure_future(tool.handler(ctx, args))
+    from sqlalchemy.exc import DBAPIError
+
+    from cda.tools.rls import tool_scope
+
+    async def scoped_handler() -> ToolResult:
+        async with tool_scope(ctx.conn, ctx.user_id, ctx.timeout_s):
+            return await tool.handler(ctx, args)
+
+    task = asyncio.ensure_future(scoped_handler())
     try:
-        return await asyncio.wait_for(task, timeout=ctx.timeout_s)
+        return await asyncio.wait_for(task, timeout=ctx.timeout_s + _ASYNC_GRACE_S)
     except TimeoutError:
         if task.cancelled():
             return timeout()
         return task.result()
+    except DBAPIError as exc:
+        if getattr(exc.orig, "sqlstate", None) == "57014":
+            return timeout()
+        raise
