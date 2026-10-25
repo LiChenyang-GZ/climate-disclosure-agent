@@ -10,3 +10,7 @@ __pycache__/
 data/real/**/*.pdf
 data/real/**/answer_key*.yaml
 data/reference/
+
+# Codex sandbox caches
+.tmp/
+.uv-cache/
