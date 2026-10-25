@@ -2,7 +2,7 @@
 
 This is the source of truth for **how** the system is built. `01-requirements.md` says what it does; `03-tasks.md` says in what order it is built. If code and this file disagree, raise it in the PR — do not silently pick one.
 
-Decisions are numbered **D1–D74**. Task specs cite them by number (e.g. "follow D35, D58").
+Decisions are numbered **D1–D75**. Task specs cite them by number (e.g. "follow D35, D58").
 
 ## 1. Tech stack
 
@@ -101,7 +101,7 @@ tests/                 mirrors src/cda/; fixtures/ holds small PDFs and fake-LLM
 | `packs` | id, company, reporting_year, team_id, created_by, created_at |
 | `documents` | id, pack_id, kind (`sustainability`, `annual`, `other`), filename, sha256, page_count, parser_version, deleted_at (soft delete, D53) |
 | `document_parts` | id, document_id, kind (`sustainability`, `annual`, `other`), first_pdf_page, last_pdf_page, label (nullable), created_at. Optional page-range parts inside one PDF (D69) |
-| `units` | id, document_id, parent_id (nullable), kind (`paragraph`, `table_row`, `section`, `table`), pdf_page, printed_page (nullable), page_half (nullable, `left`/`right`, D70), section_path, text, context_header, tsv (`tsvector`), embedding (`vector(384)`, nullable), parser_version, token_count. **Immutable** once written (D52) |
+| `units` | id, document_id, parent_id (nullable), kind (`paragraph`, `table_row`, `section`, `table`), pdf_page, printed_page (nullable), page_half (nullable, `left`/`right`, D70), seq (reading order within the document, D75), section_path, text, context_header, tsv (`tsvector`), embedding (`vector(384)`, nullable), parser_version, token_count. **Immutable** once written (D52) |
 | `check_sets` | version, yaml_sha256 |
 | `runs` | id, pack_id, method (`A`,`B`,`C`,`LC`), model_key, check_set_version, prompt_sha256, budget_usd, spent_usd, status (`queued`,`running`,`waiting_review`,`final`,`cancelled`,`failed`), lease_owner, lease_expires_at, idempotency_key (unique, D24) |
 | `run_events` | id (bigserial), run_id, check_id (nullable), type, payload jsonb, created_at |
@@ -120,6 +120,7 @@ Permissions (D29, D61): every tool query joins `packs.team_id` against the calle
 - Header/footer: the same text at the same position on more than half the pages is dropped (D32).
 - Store `pdf_page` (1-based, used for links `#page=N` and verification) and `printed_page` when detectable (D31).
 - Child units: paragraphs; paragraphs over ~350 tokens split on sentence boundaries, no overlap (D34). Tables: one child per row with header cells prefixed; the whole table is the parent, stored as Markdown (D33, D62). Sections are parents of paragraphs.
+- Reading order (D75): `units.seq` is the unit's 0-based position in the parser's reading order for its document (added in the T08 migration). Neighbours (`read_unit`), section contents and the "quote spans the next unit" rule (T10) all use `seq`.
 - Context header per unit: `"{filename} > {section path}"` prepended for indexing only, never in quotes (D6).
 - Limits: max 600 pages, per-page timeout, worker container memory cap (D49). No OCR, no chart images.
 - **Page convention (D70, refines D31)**: every stored location, quote check, answer key entry, `parts.yaml` range and `#page=N` link uses `pdf_page` (1-based). `printed_page` is display-only.
@@ -288,3 +289,4 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 72 | Dev/test split (synthetic + 1 real vs 3 real); precision layer + unlabelled scale layer (20–30 reports); real-company evals local only; real PDFs and answer keys never committed |
 | 73 | ASIC sources: cite REP 839 (21 Sep 2026) alongside the 18 May 2026 early observations; no new checks; verify page references against the REP 839 PDF before editing `checks.yaml` |
 | 74 | Inconsistencies are flags for human review, not verdicts; T2 defaults to Needs review; inconsistency recall reported on the synthetic company only |
+| 75 | Units store `seq`, their reading-order position within the document (unique per document, immutable); "next unit", neighbours and section contents use it |

@@ -50,9 +50,9 @@ Section numbers refer to `02-design.md`; D-numbers to its decision digest (§15)
 | T05 | pymupdf (`find_tables`) | §5 | D33, D62 |
 | T06 | Postgres `tsvector`/`ts_rank_cd`, sentence-transformers (`bge-small-en-v1.5`), pgvector | §5, §6 | D6, D8, D10, D35 |
 | T07 | openai, pydantic, tenacity | §1 models, §7, §8 | D18, D20, D21, D22, D27, D46, D47, D48, D66 |
-| T08 | sqlalchemy | §6 | D11, D28, D29, D58, D60, D62, D69 |
+| T08 | sqlalchemy, alembic | §4, §5, §6 | D11, D28, D29, D58, D60, D62, D69, D75 |
 | T09 | Postgres roles + RLS policies, testcontainers | §4 | D61 |
-| T10 | stdlib only | §7 | D17, D28 |
+| T10 | stdlib only | §7 | D17, D28, D75 |
 | T11 | langgraph | §7 | D2, D12, D14, D15, D30, D39, D40, D58, D59, D67, D69 |
 | T12 | langgraph, langgraph-checkpoint-postgres | §8 | D1, D3, D16, D22, D23, D45 |
 | T13 | stdlib, pydantic | §9 | D41, D42, D74 |
