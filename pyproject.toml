@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "pydantic-settings",
+    "pyyaml",
     "uvicorn",
 ]
 
@@ -19,6 +20,7 @@ dev = [
     "mypy",
     "pytest",
     "ruff",
+    "types-PyYAML",
 ]
 
 [tool.hatch.build.targets.wheel]
