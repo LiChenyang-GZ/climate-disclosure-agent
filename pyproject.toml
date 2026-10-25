@@ -12,6 +12,7 @@ dependencies = [
     "asyncpg",
     "fastapi",
     "pydantic-settings",
+    "pyyaml",
     "sqlalchemy[asyncio]",
     "uvicorn",
 ]
@@ -22,9 +23,9 @@ dev = [
     "mypy",
     "pytest-asyncio",
     "pytest",
-    "pyyaml",
     "ruff",
     "testcontainers[postgres]",
+    "types-PyYAML",
 ]
 
 [tool.hatch.build.targets.wheel]
