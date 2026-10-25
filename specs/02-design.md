@@ -100,7 +100,7 @@ tests/                 mirrors src/cda/; fixtures/ holds small PDFs and fake-LLM
 | `teams`, `team_members` | team ↔ user |
 | `packs` | id, company, reporting_year, team_id, created_by, created_at |
 | `documents` | id, pack_id, kind (`sustainability`, `annual`, `other`), filename, sha256, page_count, parser_version, deleted_at (soft delete, D53) |
-| `document_parts` | id, document_id, kind (`sustainability`, `annual`, `other`), first_pdf_page, last_pdf_page. Optional page-range parts inside one PDF (D69) |
+| `document_parts` | id, document_id, kind (`sustainability`, `annual`, `other`), first_pdf_page, last_pdf_page, label (nullable), created_at. Optional page-range parts inside one PDF (D69) |
 | `units` | id, document_id, parent_id (nullable), kind (`paragraph`, `table_row`, `section`, `table`), pdf_page, printed_page (nullable), page_half (nullable, `left`/`right`, D70), section_path, text, context_header, tsv (`tsvector`), embedding (`vector(384)`, nullable), parser_version, token_count. **Immutable** once written (D52) |
 | `check_sets` | version, yaml_sha256 |
 | `runs` | id, pack_id, method (`A`,`B`,`C`,`LC`), model_key, check_set_version, prompt_sha256, budget_usd, spent_usd, status (`queued`,`running`,`waiting_review`,`final`,`cancelled`,`failed`), lease_owner, lease_expires_at, idempotency_key (unique, D24) |
