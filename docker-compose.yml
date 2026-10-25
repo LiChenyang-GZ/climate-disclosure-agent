@@ -6,7 +6,7 @@ services:
       POSTGRES_PASSWORD: cda
       POSTGRES_DB: cda
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${CDA_DB_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -34,7 +34,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://cda:cda@db:5432/cda
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy

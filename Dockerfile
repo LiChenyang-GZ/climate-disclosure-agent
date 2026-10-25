@@ -4,7 +4,7 @@ FROM python:3.12-slim
 
 WORKDIR /app
 COPY --from=uv /uv /uvx /bin/
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock alembic.ini ./
 COPY src ./src
 RUN uv sync --frozen --no-dev \
     && groupadd --gid 10001 cda \
