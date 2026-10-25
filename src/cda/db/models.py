@@ -34,6 +34,7 @@ from cda.db.enums import (
     EVIDENCE_ROLES,
     FINDING_STATUSES,
     INCONSISTENCY_TYPES,
+    PAGE_HALVES,
     REVIEW_DECISIONS,
     RUN_METHODS,
     RUN_STATUSES,
@@ -44,6 +45,7 @@ from cda.db.enums import (
     EvidenceRole,
     FindingStatus,
     InconsistencyType,
+    PageHalf,
     ReviewDecision,
     RunMethod,
     RunStatus,
@@ -176,6 +178,32 @@ class Document(Base):
     )
 
 
+class DocumentPart(Base):
+    __tablename__ = "document_parts"
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        primary_key=True,
+        nullable=False,
+        server_default=sql_text("gen_random_uuid()"),
+    )
+    document_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[DocumentKind] = mapped_column(Text(), nullable=False)
+    first_pdf_page: Mapped[int] = mapped_column(Integer(), nullable=False)
+    last_pdf_page: Mapped[int] = mapped_column(Integer(), nullable=False)
+    label: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sql_text("now()")
+    )
+    __table_args__ = (
+        CheckConstraint(_allowed_values("kind", DOCUMENT_KINDS), name="ck_document_parts_kind"),
+        CheckConstraint("first_pdf_page >= 1", name="ck_document_parts_first_pdf_page"),
+        CheckConstraint("last_pdf_page >= first_pdf_page", name="ck_document_parts_range"),
+        Index("ix_document_parts_document_id", "document_id"),
+    )
+
+
 class Unit(Base):
     __tablename__ = "units"
 
@@ -193,6 +221,7 @@ class Unit(Base):
     )
     kind: Mapped[UnitKind] = mapped_column(Text(), nullable=False)
     pdf_page: Mapped[int] = mapped_column(Integer(), nullable=False)
+    page_half: Mapped[PageHalf | None] = mapped_column(Text(), nullable=True)
     printed_page: Mapped[str | None] = mapped_column(Text(), nullable=True)
     section_path: Mapped[str] = mapped_column(Text(), nullable=False)
     text: Mapped[str] = mapped_column(Text(), nullable=False)
@@ -212,6 +241,7 @@ class Unit(Base):
 
     __table_args__ = (
         CheckConstraint(_allowed_values("kind", UNIT_KINDS), name="ck_units_kind"),
+        CheckConstraint(_allowed_values("page_half", PAGE_HALVES), name="ck_units_page_half"),
         CheckConstraint("pdf_page >= 1", name="ck_units_pdf_page"),
         CheckConstraint("char_length(text) > 0", name="ck_units_text"),
         CheckConstraint("token_count >= 0", name="ck_units_token_count"),

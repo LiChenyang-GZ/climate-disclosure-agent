@@ -1,0 +1,12 @@
+# Ranges use 1-based inclusive PDF pages, not printed pages.
+# Documentation example only; no PDFs are shipped in this folder.
+documents:
+  - filename: annual-report-2026.pdf
+    kind: annual
+    parts:
+      - kind: sustainability
+        first_pdf_page: 118
+        last_pdf_page: 151
+        label: Climate-related financial disclosures
+  - filename: climate-data-pack-2026.pdf
+    kind: other
