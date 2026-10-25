@@ -13,8 +13,10 @@ Christy owns this project. Claude designs, writes task specs, runs Codex, review
 2. `git switch -c task/TNN main`, then `uv sync`.
 3. Run Codex in the background (it can take 5–20 minutes; do not block on it):
    ```
-   codex exec -m <model from the spec: gpt-6-luna | gpt-6.1-sol> --sandbox workspace-write -c sandbox_workspace_write.network_access=true -o .codex/summary.md "Read AGENTS.md first and follow it exactly. Implement the task in specs/tasks/TNN.md. Finish with the three-section summary defined in AGENTS.md."
+   codex exec -m <model from the spec: gpt-6-luna | gpt-6.1-sol> --sandbox workspace-write -c windows.sandbox=elevated -c sandbox_workspace_write.network_access=true -o .codex/summary.md "Read AGENTS.md first and follow it exactly. Implement the task in specs/tasks/TNN.md. Finish with the three-section summary defined in AGENTS.md." --json < /dev/null > .codex/events.jsonl 2> .codex/stderr.log
    ```
+   `< /dev/null` is required: without it `codex exec` waits for stdin and never starts. `--json` writes the run's own token usage to `.codex/events.jsonl`, which keeps cost per task correct when two tasks run in parallel: cost = `turn.completed.usage` priced with `config/models.yaml`.
+   Windows sandbox notes: the elevated sandbox for `CODEX_HOME=D:\DevTools\codex\home` was installed on 2026-10-25 (admin, once). Codex cannot reach Docker from the sandbox, so DB tests skip there; Claude runs them with `CDA_REQUIRE_DOCKER=1`. Files Codex creates under the system temp dir and `.pytest_cache` belong to the sandbox account, so Claude runs pytest with `-p no:cacheprovider --basetemp=<scratch dir>`.
    For a revision, add to the prompt: "This is a revision. Address every point in .codex/feedback.md; keep the rest of the work."
    If Codex fails to start (sandbox or auth error), stop and report the exact error to Christy; do not switch to `--dangerously-bypass-approvals-and-sandbox`.
 4. After Codex finishes:
