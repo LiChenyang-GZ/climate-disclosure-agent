@@ -19,6 +19,8 @@ dependencies = [
     "sentence-transformers",
     "torch",
     "uvicorn",
+    "openai<3",
+    "tenacity>=9.2.1",
 ]
 
 [dependency-groups]
