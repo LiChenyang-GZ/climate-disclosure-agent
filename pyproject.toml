@@ -8,9 +8,12 @@ version = "0.1.0"
 description = "Climate Disclosure Agent"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic",
+    "asyncpg",
     "fastapi",
     "pydantic-settings",
     "pyyaml",
+    "sqlalchemy[asyncio]",
     "uvicorn",
 ]
 
@@ -18,8 +21,10 @@ dependencies = [
 dev = [
     "httpx",
     "mypy",
+    "pytest-asyncio",
     "pytest",
     "ruff",
+    "testcontainers[postgres]",
     "types-PyYAML",
 ]
 
@@ -36,3 +41,5 @@ strict = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = ["db: requires a PostgreSQL container"]
