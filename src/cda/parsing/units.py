@@ -14,7 +14,7 @@ from cda.parsing.layout import Block
 class ParsedUnit:
     key: str
     parent_key: str | None
-    kind: Literal["section", "paragraph"]
+    kind: Literal["section", "paragraph", "table", "table_row"]
     pdf_page: int
     page_half: PageHalf | None
     printed_page: str | None
@@ -86,13 +86,15 @@ def build_units(
     sizes: Counter[float] = Counter()
     for _, _, _, blocks in pages:
         for block in blocks:
-            sizes[block.font_size] += len(normalize_text(block.text))
+            if block.table is None:
+                sizes[block.font_size] += len(normalize_text(block.text))
     body = sizes.most_common(1)[0][0] if sizes else 0
 
     def heading(b: Block) -> bool:
         t = normalize_text(b.text)
         return (
-            bool(t)
+            b.table is None
+            and bool(t)
             and len(t.split()) <= 20
             and not t.endswith(".")
             and (b.font_size >= body * 1.15 or (b.bold and len(t.split()) <= 12))
@@ -112,6 +114,48 @@ def build_units(
     for page, half, printed, blocks in pages:
         counter = 0
         for block in blocks:
+            if block.table is not None:
+                counter += 1
+                key = (
+                    f"p{page}{'L' if half == 'left' else 'R' if half == 'right' else ''}-{counter}"
+                )
+                parent = stack[-1][1] if stack else None
+                path = " > ".join(s[2] for s in stack)
+                result.append(
+                    ParsedUnit(
+                        key,
+                        parent,
+                        "table",
+                        page,
+                        half,
+                        printed,
+                        path,
+                        block.text,
+                        count_tokens(block.text),
+                    )
+                )
+                for row in block.table.rows:
+                    counter += 1
+                    row_key = f"p{page}{'L' if half == 'left' else 'R' if half == 'right' else ''}-{counter}"
+                    row_text = "; ".join(
+                        f"{header}: {cell}"
+                        for header, cell in zip(block.table.header, row, strict=True)
+                        if cell
+                    )
+                    result.append(
+                        ParsedUnit(
+                            row_key,
+                            key,
+                            "table_row",
+                            page,
+                            half,
+                            printed,
+                            path,
+                            row_text,
+                            count_tokens(row_text),
+                        )
+                    )
+                continue
             text = normalize_text(block.text)
             if not text:
                 continue
