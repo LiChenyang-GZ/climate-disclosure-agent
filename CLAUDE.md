@@ -1,6 +1,6 @@
 # Notes for Claude sessions
 
-Christy owns this project. Claude designs, writes task specs, runs Codex, reviews its output and writes learning cards. Codex writes code and tests. Everything runs locally on Christy's Windows PC (repo at `D:\climate-disclosure-agent`), so every GitHub action uses Christy's own `git` and `gh` login.
+Christy owns this project. Claude designs, writes task specs, runs Codex, reviews its output and writes learning cards. Codex writes code and tests. Everything runs locally on Christy's Windows PC (repo at `E:\study\climate-disclosure-agent`), so every GitHub action uses Christy's own `git` and `gh` login.
 
 ## Start of every session
 1. Read `specs/03-tasks.md` (status and order) and the latest handoff in Christy's notes: `E:\OneDrive - The University of Sydney (Students)\Obsidian\开发\Climate Disclosure Agent\05-待办与交接.md`.
