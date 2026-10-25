@@ -16,6 +16,8 @@ dependencies = [
     "pymupdf<2",
     "pyyaml",
     "sqlalchemy[asyncio]",
+    "sentence-transformers",
+    "torch",
     "uvicorn",
 ]
 
@@ -44,4 +46,12 @@ strict = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-markers = ["db: requires a PostgreSQL container"]
+markers = ["db: requires a PostgreSQL container", "model: downloads and runs the real embedding model"]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
