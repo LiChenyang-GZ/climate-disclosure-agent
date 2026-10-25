@@ -21,6 +21,7 @@ dependencies = [
     "uvicorn",
     "openai<3",
     "tenacity>=9.2.1",
+    "langgraph>=1.2.17",
 ]
 
 [dependency-groups]

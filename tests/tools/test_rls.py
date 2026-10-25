@@ -260,7 +260,7 @@ async def test_dispatch_python_timeout(db, monkeypatch):
     started = monotonic()
     result = await run_tool(ToolContext(db, uuid4(), uuid4(), timeout_s=0.2), "slow", {})
     assert result.category == "timeout" and result.retryable
-    assert monotonic() - started >= 1.2
+    assert monotonic() - started >= 1.2 - 0.05  # Windows timer resolution
     assert await db.scalar(text("SELECT 1")) == 1
 
 
