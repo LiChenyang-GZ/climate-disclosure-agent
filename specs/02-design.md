@@ -2,7 +2,7 @@
 
 This is the source of truth for **how** the system is built. `01-requirements.md` says what it does; `03-tasks.md` says in what order it is built. If code and this file disagree, raise it in the PR — do not silently pick one.
 
-Decisions are numbered **D1–D68**. Task specs cite them by number (e.g. "follow D35, D58").
+Decisions are numbered **D1–D74**. Task specs cite them by number (e.g. "follow D35, D58").
 
 ## 1. Tech stack
 
@@ -100,7 +100,8 @@ tests/                 mirrors src/cda/; fixtures/ holds small PDFs and fake-LLM
 | `teams`, `team_members` | team ↔ user |
 | `packs` | id, company, reporting_year, team_id, created_by, created_at |
 | `documents` | id, pack_id, kind (`sustainability`, `annual`, `other`), filename, sha256, page_count, parser_version, deleted_at (soft delete, D53) |
-| `units` | id, document_id, parent_id (nullable), kind (`paragraph`, `table_row`, `section`, `table`), pdf_page, printed_page (nullable), section_path, text, context_header, tsv (`tsvector`), embedding (`vector(384)`, nullable), parser_version, token_count. **Immutable** once written (D52) |
+| `document_parts` | id, document_id, kind (`sustainability`, `annual`, `other`), first_pdf_page, last_pdf_page. Optional page-range parts inside one PDF (D69) |
+| `units` | id, document_id, parent_id (nullable), kind (`paragraph`, `table_row`, `section`, `table`), pdf_page, printed_page (nullable), page_half (nullable, `left`/`right`, D70), section_path, text, context_header, tsv (`tsvector`), embedding (`vector(384)`, nullable), parser_version, token_count. **Immutable** once written (D52) |
 | `check_sets` | version, yaml_sha256 |
 | `runs` | id, pack_id, method (`A`,`B`,`C`,`LC`), model_key, check_set_version, prompt_sha256, budget_usd, spent_usd, status (`queued`,`running`,`waiting_review`,`final`,`cancelled`,`failed`), lease_owner, lease_expires_at, idempotency_key (unique, D24) |
 | `run_events` | id (bigserial), run_id, check_id (nullable), type, payload jsonb, created_at |
@@ -121,6 +122,9 @@ Permissions (D29, D61): every tool query joins `packs.team_id` against the calle
 - Child units: paragraphs; paragraphs over ~350 tokens split on sentence boundaries, no overlap (D34). Tables: one child per row with header cells prefixed; the whole table is the parent, stored as Markdown (D33, D62). Sections are parents of paragraphs.
 - Context header per unit: `"{filename} > {section path}"` prepended for indexing only, never in quotes (D6).
 - Limits: max 600 pages, per-page timeout, worker container memory cap (D49). No OCR, no chart images.
+- **Page convention (D70, refines D31)**: every stored location, quote check, answer key entry, `parts.yaml` range and `#page=N` link uses `pdf_page` (1-based). `printed_page` is display-only.
+- **Two-page spreads (D70)**: some annual reports put two printed pages on one landscape PDF page. Detect pages that are clearly wider than tall and order blocks left half first, then right half; units record which half they came from (new nullable `units.page_half`, `left`/`right`, added in the T04 migration) so two units on the same `pdf_page` stay distinguishable. Links still open the whole PDF page. (Suspected for CBA's 2026 report; confirm on the real file.)
+- **Parts (D69)**: real ASX companies publish the AASB S2 sustainability report as a section inside the annual report, not as a separate PDF. A document may therefore have page-range parts, loaded from `data/real/<company>/parts.yaml` (`kind`, `first_pdf_page`, `last_pdf_page`). A unit belongs to the part whose range contains its `pdf_page`; pages outside every part, and documents without parts, fall back to `documents.kind`. The PDF is never split and page numbers never change. Parts are resolved at query time (not copied into `units`), so a wrong range can be fixed without re-parsing (D52). Exact schema and loader are settled in the T04 spec.
 
 ## 6. Agent tools (T08)
 
@@ -139,7 +143,7 @@ All tools return the same envelope (D60):
 | `semantic_search` | same as keyword_search | method C only |
 | `submit_finding` | see §7 | ends the loop |
 
-- Tool layer records every query (normalised: lower case, collapsed whitespace) and the documents it covered — this feeds D58.
+- Tool layer records every query (normalised: lower case, collapsed whitespace) and the documents it covered — this feeds D58. With parts (D69), coverage is recorded per part, and `list_documents` / search results show each part so the worker can target e.g. the sustainability section vs the rest of the annual report.
 - Document text is data, not instructions (D28). The system prompt says so; tools are read-only; findings must pass verification.
 
 ## 7. Worker loop per check (T11)
@@ -157,7 +161,7 @@ build_prompt → call_model → (tool call?) ─yes→ run_tool → update_state
 - **Guards**: step cap 12, token cap 60k per check (D15, D22); repeated identical normalised query is rejected with a `bad_args` envelope; budget pre-deducted before each model call — if the run budget would be exceeded, stop and mark remaining checks `Not checked`.
 - **`submit_finding`** args (Pydantic, strict schema, D12, D47): `status`, `rationale`, `missing_aspects[]`, `relief_applied: bool`, `evidence[] {unit_id, quote, role}`, `facts[] {name, value, unit, scope, year, unit_id}`. Invalid JSON → one retry with the validation error, then `Error`.
 - **Verification** (D17 option A, T10): each quote must appear verbatim in the cited unit after whitespace normalisation; a quote may span the cited unit and the next unit (page breaks); the unit must belong to the run's pack and be visible to the user.
-- **"No evidence found" rule** (D58): accepted only if `len(distinct normalised queries) ≥ min_searches` (default 4, per check in `checks.yaml`) **and** every non-deleted document in the pack was covered. Otherwise status becomes `Needs review` with reason `insufficient search`.
+- **"No evidence found" rule** (D58): accepted only if `len(distinct normalised queries) ≥ min_searches` (default 4, per check in `checks.yaml`) **and** every non-deleted document in the pack was covered — counted per part where a document has parts (D69). Otherwise status becomes `Needs review` with reason `insufficient search`.
 - **Confidence** (D40): high = ≥1 verified quote, all documents covered, no cap hit; otherwise low. "No evidence" is always low.
 - Model settings: temperature 0, fixed seed, record `system_fingerprint` (D18, D48). Shared system prompt first for prompt caching (D27). Prompts are files under `agent/prompts/`; their SHA-256 is stored on the run (D39).
 - Reasoning goes in `rationale` only; no separate long chain-of-thought output (D30).
@@ -168,9 +172,10 @@ build_prompt → call_model → (tool call?) ─yes→ run_tool → update_state
 ## 9. Inconsistency detection (T13, D41, D42)
 - Workers extract facts into `facts`. Code compares T3 (restated figures), T4 (regulatory target in annual report missing from targets), T6 (reporting period).
 - Normalise units (t / kt / Mt CO2e → tCO2e), carry `scope` (group / Australian operations) and `year`; if scope or year differ or a number cannot be extracted → `Needs review`, never `Inconsistent`.
-- T1, T2 are judged by the worker for the relevant check and need a quote from each document (`side_a`, `side_b`).
+- T1, T2 are judged by the worker for the relevant check and need a quote from each document, or each part where a document has parts (D69) (`side_a`, `side_b`).
 - T5: worker lists cross-references; code checks the referenced document exists in the pack and the reference names a section.
 - `Inconsistent` has the highest precedence over other statuses.
+- **Flags, not verdicts (D74)**: an `Inconsistent` finding means "these two passages differ — please review", never "contradiction"; differences can be legitimate (e.g. IAS 36 impairment rules differ from climate narratives). T2 results default to `Needs review`, not `Inconsistent`.
 
 ## 10. Retrieval methods (T16, T17)
 | Method | How |
@@ -189,10 +194,14 @@ No reranker in phase 1 (D9, experiment E3).
 Stdio, local only. Calls the same Python functions as the API, including permission functions (D51). Tools: `list_packs`, `get_run`, `get_findings`, `search_pack`, `start_check`. No review through MCP.
 
 ## 13. Evaluation (T18, T19)
-- Answer key per pack: check → expected status, expected evidence (document, pdf_page, key text). Evidence match = same page and key-text overlap (D54).
+- Answer key per pack: check → expected status, expected evidence (document, part, pdf_page, key text; pages are PDF pages, D70). Evidence match = same page and key-text overlap (D54).
 - Metrics: status accuracy, evidence recall, citation accuracy, process metrics (repeat-query rate, document coverage, mean steps, cap-hit rate), Hit@K and MRR for retrieval; injection tests are a hard gate reported separately (D64). Each method run 3 times, report ranges (D48).
-- Real companies: use the company's AASB S2 index table where present; otherwise Claude labels and Christy spot-checks 20% (D55).
+- Real companies: use the company's AASB S2 index table where present; otherwise Claude labels and Christy spot-checks (D55, made concrete by D71). Claude labels all 60 cells (4 companies × 15 checks). Christy independently labels 12 cells (3 per company, at least one `not_found`/`inconsistent` and one `hard` each) without seeing Claude's labels, answering 3–5 yes/no sub-questions per check; agreement rate is reported. Disagreements on page, quote or presence are fixed against the source; disagreements on interpretation mean the check wording is unclear and go back to `checks.yaml`.
+- Answer key fields (D71): status (`found`, `partial`, `not_found`, `inconsistent`, `not_applicable`), relief_applied, evidence[] {part, pdf_page, quote, role `primary`|`alternate`, source_type `text`|`table`|`figure`}, scanned ranges (required for `not_found`/`inconsistent`), difficulty, unsure, labeler, key_version. Matching any `primary` or `alternate` counts. `not_applicable` cells are excluded from the denominator and reported separately. Key changes after an eval are logged and both before/after scores are reported.
+- Split and layers (D72): development set = synthetic company + 1 real company; test set = the other 3 real companies, run once after the configuration is frozen. Precision layer = the labelled companies; scale layer = 20–30 more real reports, unlabelled, reporting only cost, time, failure rate, needs-review rate and parse problems. Real-company results are reported as "agreement with the reference answers", not accuracy, and are split by index table yes/no, status and difficulty.
+- Real-company PDFs and real-company answer keys are never committed (D72): PDFs live in `data/real/<company>/`, answer keys in `data/real/<company>/answer_key.yaml`, both ignored by `.gitignore`; `parts.yaml` and the download list may be committed; only aggregate numbers go into `report.md` and the README. Real-company evals run locally; CI and GitHub Actions use the synthetic company only.
 - CI on every push: unit tests, parse tests, fake-LLM flow tests, keyword-retrieval recall on the synthetic company — no paid calls. Full eval is manual (D56).
+- Inconsistency metrics (D74): recall is reported on the synthetic company only; on real companies report only how many differences were flagged and how many a human confirmed.
 
 ## 14. Testing rules
 - No test calls OpenAI. Use `llm/fake.py`: a scripted fake that returns a given sequence of tool calls.
@@ -273,3 +282,9 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 66 | Request fingerprint per model call |
 | 67 | Worker loop as explicit nodes, no prebuilt agent |
 | 68 | E6: evidence position test (start / middle / end) |
+| 69 | A PDF may hold page-range parts (`parts.yaml` → `document_parts`); the PDF is not split; parts resolved at query time; D58 coverage counted per part |
+| 70 | All locations, answer keys and links use PDF page index (refines D31); detect two-page spreads and keep the half in the unit |
+| 71 | Real-company reference answers: Claude labels 60 cells; Christy blind-labels 12 via yes/no sub-questions; answer key adds part, source_type, unsure, alternates, not_applicable, key_version |
+| 72 | Dev/test split (synthetic + 1 real vs 3 real); precision layer + unlabelled scale layer (20–30 reports); real-company evals local only; real PDFs and answer keys never committed |
+| 73 | ASIC sources: cite REP 839 (21 Sep 2026) alongside the 18 May 2026 early observations; no new checks; verify page references against the REP 839 PDF before editing `checks.yaml` |
+| 74 | Inconsistencies are flags for human review, not verdicts; T2 defaults to Needs review; inconsistency recall reported on the synthetic company only |
