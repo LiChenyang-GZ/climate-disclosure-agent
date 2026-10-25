@@ -25,6 +25,7 @@ TABLES = {
     "team_members",
     "packs",
     "documents",
+    "document_parts",
     "units",
     "check_sets",
     "runs",

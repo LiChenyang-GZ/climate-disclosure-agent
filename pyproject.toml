@@ -13,6 +13,7 @@ dependencies = [
     "fastapi",
     "pgvector>=0.5.1",
     "pydantic-settings",
+    "pymupdf<2",
     "pyyaml",
     "sqlalchemy[asyncio]",
     "uvicorn",

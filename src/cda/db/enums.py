@@ -39,3 +39,5 @@ INCONSISTENCY_TYPES: tuple[str, ...] = get_args(InconsistencyType)
 
 ReviewDecision = Literal["confirm", "change_status"]
 REVIEW_DECISIONS: tuple[str, ...] = get_args(ReviewDecision)
+PageHalf = Literal["left", "right"]
+PAGE_HALVES: tuple[str, ...] = get_args(PageHalf)
