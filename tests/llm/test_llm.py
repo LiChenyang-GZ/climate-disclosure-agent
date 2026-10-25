@@ -329,6 +329,21 @@ async def test_import_without_api_key(monkeypatch):
     importlib.reload(cda.llm)
 
 
+async def test_missing_key_fails_only_on_complete(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    requests = []
+
+    async def handler(request):
+        requests.append(request)
+        return httpx.Response(200, json=reply())
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as transport:
+        client = OpenAIClient(ModelTable.load(), http_client=transport)
+        with pytest.raises(LLMAuthError):
+            await client.complete(messages=MESSAGES, tools=[], model_key="sol")
+    assert requests == []
+
+
 @pytest.mark.parametrize("header,expected", [("100", 30), ("invalid", None), ("-1", None)])
 async def test_retry_after_bounds(harness, header, expected):
     client, _, sleeps = harness([(429, {"Retry-After": header}, {}), (200, {}, reply())])

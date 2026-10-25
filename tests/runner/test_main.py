@@ -1,25 +1,30 @@
 import logging
-import threading
-import time
 
-from cda.runner.main import main
+from langgraph.checkpoint.memory import InMemorySaver
+
+from cda.config import Settings
+from cda.llm.openai_client import OpenAIClient
+from cda.runner import main as worker
+from cda.runner.deps import build_run_deps
 
 
-def test_main_logs_start_idle_stop_and_returns_zero(caplog) -> None:
-    stop_event = threading.Event()
+def test_build_run_deps_without_api_key(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    deps = build_run_deps(
+        Settings(database_url="postgresql+asyncpg://localhost/cda_test"), InMemorySaver()
+    )
+    assert isinstance(deps.llm, OpenAIClient)
 
-    def stop_after_ticks() -> None:
-        time.sleep(0.035)
-        stop_event.set()
 
-    stopper = threading.Thread(target=stop_after_ticks)
+def test_main_signal_stop(monkeypatch, caplog):
+    def signal_stub(signum, handler):
+        if callable(handler):
+            handler(signum, None)
+
+    monkeypatch.setattr(worker.signal, "getsignal", lambda _: worker.signal.SIG_IGN)
+    monkeypatch.setattr(worker.signal, "signal", signal_stub)
     with caplog.at_level(logging.INFO):
-        stopper.start()
-        result = main(interval=0.01, stop_event=stop_event)
-        stopper.join()
-
-    assert result == 0
-    messages = [record.getMessage() for record in caplog.records]
-    assert "worker started" in messages
-    assert messages.count("worker idle") >= 1
-    assert "worker stopped" in messages
+        assert worker.main() == 0
+    assert "worker started" in caplog.text
+    assert "worker stopped" in caplog.text
+    assert "postgresql://" not in caplog.text
