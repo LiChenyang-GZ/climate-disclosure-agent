@@ -2,7 +2,7 @@
 
 This is the source of truth for **how** the system is built. `01-requirements.md` says what it does; `03-tasks.md` says in what order it is built. If code and this file disagree, raise it in the PR — do not silently pick one.
 
-Decisions are numbered **D1–D75**. Task specs cite them by number (e.g. "follow D35, D58").
+Decisions are numbered **D1–D76**. Task specs cite them by number (e.g. "follow D35, D58").
 
 ## 1. Tech stack
 
@@ -201,6 +201,7 @@ Stdio, local only. Calls the same Python functions as the API, including permiss
 - Answer key fields (D71): status (`found`, `partial`, `not_found`, `inconsistent`, `not_applicable`), relief_applied, evidence[] {part, pdf_page, quote, role `primary`|`alternate`, source_type `text`|`table`|`figure`}, scanned ranges (required for `not_found`/`inconsistent`), difficulty, unsure, labeler, key_version. Matching any `primary` or `alternate` counts. `not_applicable` cells are excluded from the denominator and reported separately. Key changes after an eval are logged and both before/after scores are reported.
 - Split and layers (D72): development set = synthetic company + 1 real company; test set = the other 3 real companies, run once after the configuration is frozen. Precision layer = the labelled companies; scale layer = 20–30 more real reports, unlabelled, reporting only cost, time, failure rate, needs-review rate and parse problems. Real-company results are reported as "agreement with the reference answers", not accuracy, and are split by index table yes/no, status and difficulty.
 - Real-company PDFs and real-company answer keys are never committed (D72): PDFs live in `data/real/<company>/`, answer keys in `data/real/<company>/answer_key.yaml`, both ignored by `.gitignore`; `parts.yaml` and the download list may be committed; only aggregate numbers go into `report.md` and the README. Real-company evals run locally; CI and GitHub Actions use the synthetic company only.
+- Synthetic company (D76): Wattlebrook's pack has the same shape as the real ones: an annual report PDF that contains the sustainability report as a page-range part, plus a separate supplement PDF; its `parts.yaml` is committed. Cross-document checks and per-part coverage are therefore exercised in CI.
 - CI on every push: unit tests, parse tests, fake-LLM flow tests, keyword-retrieval recall on the synthetic company — no paid calls. Full eval is manual (D56).
 - Inconsistency metrics (D74): recall is reported on the synthetic company only; on real companies report only how many differences were flagged and how many a human confirmed.
 
@@ -290,3 +291,4 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 73 | ASIC sources: cite REP 839 (21 Sep 2026) alongside the 18 May 2026 early observations; no new checks; verify page references against the REP 839 PDF before editing `checks.yaml` |
 | 74 | Inconsistencies are flags for human review, not verdicts; T2 defaults to Needs review; inconsistency recall reported on the synthetic company only |
 | 75 | Units store `seq`, their reading-order position within the document (unique per document, immutable); "next unit", neighbours and section contents use it |
+| 76 | Wattlebrook (synthetic company) mirrors real ASX packs: one annual report PDF with the sustainability report as a page-range part (`parts.yaml`), plus a separate supplement PDF |

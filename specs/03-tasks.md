@@ -25,7 +25,7 @@ Implementation is split into small tasks. Each task is one module plus its tests
 | T12 | Orchestration: outer LangGraph graph, `Send` fan-out with max concurrency 5, budget pre-deduction, Postgres checkpointer, run statuses, human-review interrupt | T11 | sol | strict | codex | 4 |
 | T13 | Inconsistency detection: fact normalisation (units, scope, year), code comparison for T3/T4/T6, cross-reference check for T5 | T11 | sol | normal | codex | 5 |
 | T14 | Worker process: claim runs with `SKIP LOCKED`, lease and heartbeat, `run_events` + LISTEN/NOTIFY | T12 | sol | normal | codex | 5 |
-| T15 | Synthetic company (Wattlebrook Energy): generator for sustainability report + annual report with planted issues (T1, T3, T4, T5, disclaimer, single scenario, injection) and difficulty rules; answer key | T03 | sol | normal | codex (generator) + claude (issue spec, answer key review) | 5 |
+| T15 | Synthetic company (Wattlebrook Energy): generator for an annual report containing the sustainability report as a page-range part (with `parts.yaml`) + a supplement PDF (D76), with planted issues (T1, T3, T4, T5, disclaimer, single scenario, injection) and difficulty rules; answer key | T03 | sol | normal | codex (generator) + claude (issue spec, answer key review) | 5 |
 | T16 | Retrieval method B (classic RAG): hybrid search with RRF, retrieval quality threshold, single model call | T08, T07 | sol | normal | codex | 6 |
 | T17 | Method C (agent + semantic tool) and long-context baseline | T11, T16 | luna | normal | codex | 6 |
 | T18 | Evaluation harness: answer key format, status accuracy, evidence recall, citation accuracy, process metrics, injection as hard gate, Hit@K / MRR, repeated runs, `report.md` | T15, T17 | sol | normal | codex | 6 |
@@ -57,7 +57,7 @@ Section numbers refer to `02-design.md`; D-numbers to its decision digest (§15)
 | T12 | langgraph, langgraph-checkpoint-postgres | §8 | D1, D3, D16, D22, D23, D45 |
 | T13 | stdlib, pydantic | §9 | D41, D42, D74 |
 | T14 | asyncpg (LISTEN/NOTIFY) | §2 | D43, D44, D65 |
-| T15 | reportlab (PDF generation) | §13 | D55, D64, D68, D71 |
+| T15 | reportlab (PDF generation) | §5, §13 | D55, D64, D68, D69, D71, D76 |
 | T16 | pgvector, sentence-transformers | §10 | D7, D36, D37, D63 |
 | T17 | openai via `LLMClient` | §10 | D4, D9 |
 | T18 | pyyaml | §13 | D26, D48, D54, D55, D64, D70, D71, D72, D74 |
