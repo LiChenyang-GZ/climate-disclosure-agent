@@ -36,4 +36,6 @@ jobs:
         run: uv run mypy src
       - name: Pytest
         if: hashFiles('pyproject.toml') != ''
+        env:
+          CDA_REQUIRE_DOCKER: "1"
         run: uv run pytest -q

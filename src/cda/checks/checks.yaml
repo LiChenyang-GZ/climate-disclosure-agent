@@ -1,0 +1,510 @@
+# Climate Disclosure Agent check set.
+#
+# 11 checks from AASB S2 (governance, strategy, risk management, metrics and targets) and
+# 4 from ASIC's 2026 early observations on the first sustainability reports (A1-A4).
+# Each check follows D38: requirement, what counts, what does not, allowed reliefs, facts to
+# extract, preferred documents. `queries` are the pre-written queries for method B (D36).
+# `min_searches` overrides the default for the "no evidence" rule (D58).
+#
+# Paragraph references follow AASB S2 (which keeps IFRS S2 numbering) and ASIC RG 280.
+# Status: to be confirmed against the AASB S2 PDF before the real-company evaluation (T23).
+#
+# Wording rule: checks locate evidence; they never judge compliance.
+
+version: "2026.10.1"
+
+defaults:
+  min_searches: 4
+
+checks:
+  - id: G1
+    title: Board oversight of climate-related risks and opportunities
+    pillar: governance
+    source:
+      standard: AASB S2
+      references: ["para 6(a)"]
+    requirement: >-
+      Disclose the governance body or bodies (for example the board or a board committee)
+      responsible for oversight of climate-related risks and opportunities, and how that body
+      exercises oversight.
+    counts_as_evidence:
+      - Names the board or a specific board committee as responsible for climate-related risks and opportunities
+      - Describes how the body oversees them, such as how often it is informed, how it considers climate in strategy, major decisions or risk management, or how it sets and monitors targets
+      - Describes how the body ensures it has the skills and competencies to oversee climate strategy
+    does_not_count:
+      - A general statement that the board oversees all risks, with no mention of climate
+      - Management-level committees with no link to the board
+      - Sustainability activities described without saying who oversees them
+    allowed_reliefs: []
+    facts: []
+    preferred_documents: [sustainability, annual]
+    queries:
+      - board oversight of climate-related risks and opportunities
+      - board committee responsible for climate change sustainability
+      - board receives updates on climate risk frequency
+    cross_document: false
+    inconsistency_types: []
+
+  - id: G2
+    title: Management's role in climate-related risks and opportunities
+    pillar: governance
+    source:
+      standard: AASB S2
+      references: ["para 6(b)"]
+    requirement: >-
+      Disclose management's role in the governance processes, controls and procedures used to
+      monitor, manage and oversee climate-related risks and opportunities.
+    counts_as_evidence:
+      - Names a management-level position or committee responsible for climate-related risks and opportunities
+      - Describes how that role is delegated, how it reports to the board, or the controls and procedures it uses
+    does_not_count:
+      - Only board-level oversight with no management role described
+      - A sustainability team mentioned without its responsibilities
+    allowed_reliefs: []
+    facts: []
+    preferred_documents: [sustainability]
+    queries:
+      - management role climate-related risks responsibility
+      - executive committee climate risk reporting to the board
+      - Chief Sustainability Officer climate accountability
+    cross_document: false
+    inconsistency_types: []
+
+  - id: S1
+    title: Climate-related risks and opportunities and time horizons
+    pillar: strategy
+    source:
+      standard: AASB S2
+      references: ["para 10", "para 11", "para 12"]
+    requirement: >-
+      Describe the climate-related risks and opportunities that could reasonably be expected to
+      affect the entity's prospects, state whether each risk is a physical or transition risk,
+      and specify the short, medium and long-term time horizons and how they are defined.
+    counts_as_evidence:
+      - A list or table of specific climate-related risks and opportunities
+      - Each risk classified as physical (acute or chronic) or transition
+      - Time horizons named and defined, for example short term 0-2 years
+      - Each risk or opportunity linked to the time horizon in which it could reasonably be expected to occur
+    does_not_count:
+      - Generic statements that climate change is a risk, with no specific risks
+      - Time horizons named but never defined
+      - Risks listed without saying whether they are physical or transition
+    allowed_reliefs: []
+    facts: []
+    preferred_documents: [sustainability]
+    queries:
+      - climate-related risks and opportunities physical transition
+      - short medium long term time horizons climate
+      - acute chronic physical risk transition risk policy technology market
+    cross_document: false
+    inconsistency_types: []
+    min_searches: 5
+
+  - id: S2
+    title: Effects on the business model and value chain
+    pillar: strategy
+    source:
+      standard: AASB S2
+      references: ["para 13"]
+    requirement: >-
+      Describe the current and anticipated effects of climate-related risks and opportunities on
+      the entity's business model and value chain, and where in the business model and value
+      chain they are concentrated.
+    counts_as_evidence:
+      - Describes how specific climate risks or opportunities affect the business model, operations, suppliers, customers or other parts of the value chain
+      - Names where the effects are concentrated, such as geographic areas, facilities or asset types
+    does_not_count:
+      - A description of the business model with no link to climate
+      - Risks listed without saying which parts of the business or value chain they affect
+    allowed_reliefs: []
+    facts: []
+    preferred_documents: [sustainability]
+    queries:
+      - effects of climate risks on business model and value chain
+      - concentration of climate risk by geography facilities assets
+      - supply chain customers exposure to climate change
+    cross_document: false
+    inconsistency_types: []
+
+  - id: S3
+    title: Strategy and decision-making, including any transition plan
+    pillar: strategy
+    source:
+      standard: AASB S2
+      references: ["para 14"]
+    requirement: >-
+      Describe how the entity has responded to, and plans to respond to, climate-related risks
+      and opportunities in its strategy and decision-making, including any climate-related
+      transition plan, its key assumptions and dependencies, how the plans are resourced, and
+      progress on plans disclosed in prior periods.
+    counts_as_evidence:
+      - Current or planned changes to the business model, resource allocation, operations, or direct and indirect mitigation and adaptation efforts
+      - A transition plan with key assumptions and dependencies
+      - How the response is resourced
+      - Progress against plans disclosed in earlier periods (not required in the first reporting period)
+      - An explicit statement that the entity has no transition plan
+    does_not_count:
+      - Aspirational statements such as "we are committed to a low-carbon future" with no actions
+      - Targets alone, with no description of how they will be achieved (targets belong to M3)
+    allowed_reliefs:
+      - id: no_prior_period_progress
+        description: In the first reporting period there are no plans from earlier periods to report progress against.
+    facts: []
+    preferred_documents: [sustainability, annual]
+    queries:
+      - climate transition plan key assumptions dependencies
+      - strategy response to climate-related risks resource allocation
+      - decarbonisation plan progress capital investment
+    cross_document: false
+    inconsistency_types: []
+    min_searches: 5
+
+  - id: S4
+    title: Current and anticipated financial effects
+    pillar: strategy
+    source:
+      standard: AASB S2
+      references: ["paras 15-21"]
+      asic: "2026 early observations: financial effects often not quantified, with no explanation"
+    requirement: >-
+      Disclose quantitative and qualitative information about how climate-related risks and
+      opportunities have affected the entity's financial position, performance and cash flows
+      in the reporting period, and how they are anticipated to affect them over the short,
+      medium and long term. If quantitative information is not provided, explain why and give
+      qualitative information instead.
+    counts_as_evidence:
+      - Amounts or ranges for current financial effects, such as impairments, insurance costs or carbon costs, linked to climate
+      - Anticipated effects on financial position, performance or cash flows over stated horizons
+      - Identified risks with a significant risk of material adjustment to carrying amounts in the next reporting period
+      - "If not quantified: an explanation of why (for example the effects are not separately identifiable or the measurement uncertainty is too high) together with qualitative information"
+    does_not_count:
+      - Qualitative effects with no amounts and no explanation of why they are not quantified
+      - Total capital expenditure with no link to climate
+    allowed_reliefs:
+      - id: not_separately_identifiable
+        description: Quantitative information is not required if the effects are not separately identifiable or measurement uncertainty is so high the information would not be useful; the entity must say so and give qualitative information.
+      - id: lacks_skills_capabilities_resources
+        description: Anticipated effects need not be quantified if the entity lacks the skills, capabilities or resources to do so; the entity must say so.
+    facts:
+      - name: climate_financial_effect
+        unit: AUD
+        description: Any amount the entity attributes to climate-related risks or opportunities (impairment, cost, revenue, capex)
+    preferred_documents: [sustainability, annual]
+    queries:
+      - financial effects of climate-related risks financial position performance cash flows
+      - climate impairment carrying amount significant risk of material adjustment
+      - not quantified climate financial effects not separately identifiable
+    cross_document: true
+    inconsistency_types: [T2]
+    min_searches: 5
+
+  - id: S5
+    title: Scenario analysis with a 1.5°C and a ≥2.5°C scenario
+    pillar: strategy
+    source:
+      standard: AASB S2
+      references: ["para 22"]
+      law: "Corporations Act 2001 s296D(2B)"
+    requirement: >-
+      Disclose the entity's climate resilience assessed using climate-related scenario analysis,
+      including at least two scenarios: one consistent with limiting warming to 1.5°C and one
+      in which warming well exceeds 2°C (2.5°C or more). Describe the scenarios used, key
+      inputs and assumptions, when the analysis was carried out, and the results.
+    counts_as_evidence:
+      - Names at least one scenario aligned with 1.5°C and at least one with warming of 2.5°C or more, for example NGFS Net Zero 2050 and NGFS Current Policies, or IPCC SSP1-1.9 and SSP3-7.0 or SSP5-8.5
+      - Describes inputs, assumptions, time horizon or when the analysis was performed
+      - States the results or implications for the entity's strategy and business model
+    does_not_count:
+      - Only one scenario, or two scenarios that both stay below 2.5°C
+      - A plan to perform scenario analysis in future, with no results
+      - Scenario names with no temperature outcome and no way to infer one
+    allowed_reliefs:
+      - id: qualitative_scenario_analysis
+        description: In early years the entity may use qualitative scenario analysis, provided both temperature pathways are still covered.
+    facts:
+      - name: scenario_temperature
+        unit: degC
+        description: Temperature outcome of each scenario used
+    preferred_documents: [sustainability]
+    queries:
+      - climate scenario analysis 1.5°C 2.5°C resilience
+      - NGFS net zero 2050 current policies scenario
+      - SSP1-1.9 SSP5-8.5 climate scenario assumptions
+    cross_document: false
+    inconsistency_types: []
+    min_searches: 6
+
+  - id: R1
+    title: Risk management process and integration
+    pillar: risk_management
+    source:
+      standard: AASB S2
+      references: ["paras 24-26"]
+    requirement: >-
+      Describe the processes and policies used to identify, assess, prioritise and monitor
+      climate-related risks and opportunities (including inputs, parameters and the use of
+      scenario analysis), and how these processes are integrated into the entity's overall risk
+      management process.
+    counts_as_evidence:
+      - Steps used to identify and assess climate risks, such as data sources, scope of operations, likelihood and magnitude scales
+      - How climate risks are prioritised relative to other risks
+      - How they are monitored
+      - How the climate process is integrated into the entity's enterprise risk management framework
+    does_not_count:
+      - A description of the general risk management framework with no reference to climate
+      - Lists of risks without the process used to find them (that is S1)
+    allowed_reliefs: []
+    facts: []
+    preferred_documents: [sustainability, annual]
+    queries:
+      - process to identify assess prioritise monitor climate-related risks
+      - climate risk integrated into enterprise risk management framework
+      - risk assessment likelihood magnitude climate
+    cross_document: false
+    inconsistency_types: []
+
+  - id: M1
+    title: Scope 1, Scope 2 and Scope 3 greenhouse gas emissions
+    pillar: metrics_targets
+    source:
+      standard: AASB S2
+      references: ["para 29(a)", "para C4(a)"]
+    requirement: >-
+      Disclose absolute gross Scope 1 and Scope 2 greenhouse gas emissions for the reporting
+      period in tonnes of CO2-equivalent (Scope 2 on a location-based approach), the measurement
+      approach used, and Scope 3 emissions — or state that the first-year relief from Scope 3
+      disclosure is applied.
+    counts_as_evidence:
+      - Scope 1 emissions in tCO2-e for the reporting period
+      - Location-based Scope 2 emissions in tCO2-e for the reporting period
+      - Scope 3 emissions with the categories included, or an explicit statement that the entity applies the first-year Scope 3 relief
+      - The measurement approach, for example NGER or the GHG Protocol
+    does_not_count:
+      - Emissions intensity only, with no absolute figures
+      - Figures for a different period than the reporting period
+      - Combined Scope 1+2 figure with no split
+      - Silence on Scope 3 (no figures and no statement of relief)
+    allowed_reliefs:
+      - id: scope3_first_year
+        description: In the first annual reporting period the entity is not required to disclose Scope 3 emissions. Counts only if the report states that the relief is applied.
+      - id: nger_measurement
+        description: The entity may measure emissions using the NGER Scheme methods instead of the GHG Protocol for data covered by NGER.
+    facts:
+      - name: scope1_emissions
+        unit: tCO2e
+        description: Gross Scope 1 emissions for the reporting period
+      - name: scope2_location_emissions
+        unit: tCO2e
+        description: Location-based Scope 2 emissions for the reporting period
+      - name: scope2_market_emissions
+        unit: tCO2e
+        description: Market-based Scope 2 emissions, if given
+      - name: scope3_emissions
+        unit: tCO2e
+        description: Scope 3 emissions, if given
+      - name: reporting_period
+        unit: period
+        description: Period the emissions cover, for example FY2025 or 1 July 2024 - 30 June 2025
+    preferred_documents: [sustainability, annual]
+    queries:
+      - Scope 1 Scope 2 greenhouse gas emissions tCO2-e
+      - Scope 3 emissions categories first year relief
+      - location-based market-based Scope 2 NGER
+    cross_document: true
+    inconsistency_types: [T3]
+
+  - id: M2
+    title: Cross-industry metrics
+    pillar: metrics_targets
+    source:
+      standard: AASB S2
+      references: ["para 29(b)-(g)"]
+    requirement: >-
+      Disclose the cross-industry metrics: the amount and percentage of assets or business
+      activities vulnerable to transition risks and to physical risks, aligned with
+      climate-related opportunities, capital deployed towards climate-related risks and
+      opportunities, any internal carbon price, and the share of executive remuneration linked
+      to climate-related considerations.
+    counts_as_evidence:
+      - Any of the cross-industry metrics with an amount or percentage
+      - A statement that no internal carbon price is used, or that remuneration is not linked to climate
+      - For partial coverage, the rationale names which metrics are present and which are missing
+    does_not_count:
+      - Industry-specific operational metrics only, such as production volumes
+      - Statements of intent with no amount, percentage or explicit "not applied" statement
+    allowed_reliefs: []
+    facts:
+      - name: climate_capital_deployed
+        unit: AUD
+        description: Capital expenditure, financing or investment deployed towards climate-related risks and opportunities
+      - name: internal_carbon_price
+        unit: AUD/tCO2e
+        description: Internal carbon price, if used
+      - name: remuneration_linked_pct
+        unit: percent
+        description: Percentage of executive remuneration linked to climate considerations
+    preferred_documents: [sustainability, annual]
+    queries:
+      - assets vulnerable to physical transition risk percentage
+      - capital deployed towards climate-related opportunities internal carbon price
+      - executive remuneration linked to climate targets
+    cross_document: false
+    inconsistency_types: []
+    min_searches: 5
+
+  - id: M3
+    title: Climate targets, including regulatory targets, and progress
+    pillar: metrics_targets
+    source:
+      standard: AASB S2
+      references: ["paras 33-36"]
+      asic: "2026 early observations: targets required by law (for example Safeguard Mechanism baselines) omitted"
+    requirement: >-
+      Disclose the quantitative and qualitative climate-related targets the entity has set and
+      any targets it is required to meet by law or regulation (for example Safeguard Mechanism
+      baselines), including the metric, objective, period, base period, milestones, how the
+      target was set and reviewed, and performance against each target.
+    counts_as_evidence:
+      - A target with its metric, base year and target year
+      - Targets required by law or regulation, such as Safeguard Mechanism baselines, listed among the targets
+      - Progress or performance against each target
+      - For greenhouse gas targets, whether gross or net and the planned use of carbon credits
+    does_not_count:
+      - Net zero ambitions with no target year or no metric
+      - Targets listed without any progress
+    allowed_reliefs:
+      - id: no_targets_set
+        description: If the entity has set no climate targets and is subject to none by law, an explicit statement of that counts as evidence.
+    facts:
+      - name: emissions_target
+        unit: percent
+        description: Emissions reduction target, with base year, target year and scope
+      - name: safeguard_baseline
+        unit: tCO2e
+        description: Safeguard Mechanism baseline for a covered facility
+      - name: target_progress
+        unit: percent
+        description: Reported progress against a target
+    preferred_documents: [sustainability, annual]
+    queries:
+      - climate targets emissions reduction base year progress
+      - Safeguard Mechanism baseline covered facility
+      - net zero target interim target carbon credits offsets
+    cross_document: true
+    inconsistency_types: [T3, T4]
+    min_searches: 5
+
+  - id: A1
+    title: No impermissible disclaimer
+    pillar: asic_review
+    source:
+      standard: ASIC 2026 early observations
+      references: ["observation 1", "ASIC RG 280 (disclaimers; paragraph to be confirmed)"]
+    requirement: >-
+      The sustainability report must not contain a broad disclaimer that tells readers not to
+      rely on the mandatory climate disclosures or disclaims responsibility for them.
+      Disclaimers limited to forward-looking statements, together with an explanation of the
+      basis for them, are acceptable.
+    counts_as_evidence:
+      - "Evidence found means the search found the disclaimer and forward-looking statement sections and they contain no impermissible disclaimer; quote the actual disclaimer text"
+      - A disclaimer limited to forward-looking statements that explains their basis
+    does_not_count:
+      - Wording such as "should not be relied upon", "no responsibility is accepted" or "not for investment decisions" applied to the mandatory climate disclosures. Quote it and set status to Partial evidence, naming the disclaimer as the missing part
+    allowed_reliefs: []
+    facts: []
+    preferred_documents: [sustainability, annual]
+    queries:
+      - disclaimer should not be relied upon
+      - forward-looking statements important notice
+      - no representation or warranty responsibility accepted
+    cross_document: false
+    inconsistency_types: []
+
+  - id: A2
+    title: Weather-related financial effects in the annual report reflected as climate risks
+    pillar: asic_review
+    source:
+      standard: ASIC 2026 early observations
+      references: ["observation 2", "AASB S2 para B9 (past events as reasonable and supportable information)"]
+    requirement: >-
+      If the annual report or financial statements describe financial effects of extreme weather
+      or other climate-related physical events (such as flood or bushfire losses, insurance
+      claims, downtime), the climate report should identify the corresponding physical risks as
+      climate-related risks.
+    counts_as_evidence:
+      - A weather-related financial effect quoted from the annual report AND the matching physical risk quoted from the sustainability report (both sides)
+      - A search of the annual report that finds no weather-related financial effects, recorded in the rationale (the check is then satisfied with low confidence)
+    does_not_count:
+      - Only one side quoted
+      - A generic physical-risk statement that does not cover the kind of event in the annual report
+    allowed_reliefs: []
+    facts:
+      - name: weather_event_loss
+        unit: AUD
+        description: Financial effect of a weather event reported in the annual report, with the event type
+    preferred_documents: [annual, sustainability]
+    queries:
+      - flood bushfire storm extreme weather impact on results
+      - insurance claims weather event losses
+      - acute physical risk extreme weather events
+    cross_document: true
+    inconsistency_types: [T1]
+    min_searches: 5
+
+  - id: A3
+    title: Cross-references specify document and section and point to entity-published documents
+    pillar: asic_review
+    source:
+      standard: ASIC RG 280
+      references: ["RG 280.86-280.88", "AASB S2 para 63, B45-B47 (cross-referenced information)"]
+      asic: "2026 early observations: observation 5 (cross-references)"
+    requirement: >-
+      Where mandatory climate information is included by cross-reference, the reference must
+      identify the specific document and the location within it (section or page), and the
+      referenced document must be published by the entity and available on the same terms and
+      at the same time as the sustainability report.
+    counts_as_evidence:
+      - Cross-references that name the document and the section or page, where the document is published by the entity (quote the cross-reference)
+      - A statement that the report includes no information by cross-reference
+    does_not_count:
+      - '"See our website" or "refer to our other reports" with no document or section'
+      - References to third-party documents (consultants, industry bodies, regulators) for mandatory information
+      - References to documents not in the pack and not published by the entity
+    allowed_reliefs: []
+    facts:
+      - name: cross_reference_target
+        unit: text
+        description: Document and section named in a cross-reference
+    preferred_documents: [sustainability]
+    queries:
+      - refer to section for further information
+      - see annual report page incorporated by reference
+      - available on our website
+    cross_document: true
+    inconsistency_types: [T5]
+
+  - id: A4
+    title: Mandatory disclosures clearly identifiable
+    pillar: asic_review
+    source:
+      standard: ASIC 2026 early observations
+      references: ["observation 4"]
+    requirement: >-
+      Mandatory climate disclosures should be clearly identifiable, for example through an index
+      table mapping AASB S2 requirements to locations, or by a clear separation between the
+      mandatory sustainability report and voluntary content.
+    counts_as_evidence:
+      - An AASB S2 (or IFRS S2) index or content table mapping requirements to pages or sections
+      - A separate, clearly labelled sustainability report or section containing the mandatory disclosures
+    does_not_count:
+      - A GRI or TCFD index only, with no AASB S2 mapping and no separate mandatory section
+      - Mandatory information spread through a voluntary sustainability report with no signposting
+    allowed_reliefs: []
+    facts: []
+    preferred_documents: [sustainability, annual]
+    queries:
+      - AASB S2 index table
+      - sustainability report Corporations Act section 296A mandatory disclosures
+      - TCFD IFRS S2 content index
+    cross_document: false
+    inconsistency_types: []
