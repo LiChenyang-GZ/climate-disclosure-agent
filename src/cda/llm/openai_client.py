@@ -63,7 +63,9 @@ class OpenAIClient:
         self._models = models
         self._max_retries = max_retries
         self._sleep = sleep
-        self._client = openai.AsyncOpenAI(max_retries=0, timeout=timeout_s, http_client=http_client)
+        self._timeout_s = timeout_s
+        self._http_client = http_client
+        self._client: openai.AsyncOpenAI | None = None
 
     async def complete(
         self,
@@ -75,6 +77,17 @@ class OpenAIClient:
         tool_choice: str = "auto",
         max_output_tokens: int = 2000,
     ) -> LLMResponse:
+        if self._client is None:
+            auth_failed = False
+            try:
+                self._client = openai.AsyncOpenAI(
+                    max_retries=0, timeout=self._timeout_s, http_client=self._http_client
+                )
+            except openai.OpenAIError:
+                auth_failed = True
+            if auth_failed:
+                raise LLMAuthError("LLM authentication or permission denied") from None
+        assert self._client is not None
         model = self._models[model_key].model
         schemas = [strict_tool_schema(tool) for tool in tools]
         kwargs: dict[str, Any] = {}

@@ -6,6 +6,7 @@ WORKDIR /app
 COPY --from=uv /uv /uvx /bin/
 COPY pyproject.toml uv.lock alembic.ini ./
 COPY src ./src
+COPY config ./config
 RUN uv sync --frozen --no-dev \
     && groupadd --gid 10001 cda \
     && useradd --uid 10001 --gid cda --create-home cda \
