@@ -1,5 +1,6 @@
 import asyncio
-from unittest.mock import MagicMock
+from time import monotonic
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -10,7 +11,10 @@ from cda.tools.registry import TOOLS, ToolDef, run_tool, tools_for
 
 @pytest.fixture
 def ctx():
-    return ToolContext(MagicMock(), uuid4(), uuid4(), timeout_s=0.1)
+    conn = MagicMock()
+    conn.begin_nested = AsyncMock(return_value=MagicMock(rollback=AsyncMock()))
+    conn.execute = AsyncMock()
+    return ToolContext(conn, uuid4(), uuid4(), timeout_s=0.1)
 
 
 @pytest.mark.parametrize(
@@ -35,13 +39,15 @@ async def test_bad_args(ctx, name, args):
 
 async def test_timeout(ctx, monkeypatch):
     async def slow(ctx, args):
-        await asyncio.sleep(1)
+        await asyncio.sleep(5)
 
     monkeypatch.setitem(
         TOOLS, "slow", ToolDef("slow", "", TOOLS["list_documents"].args_model, slow)
     )
+    started = monotonic()
     result = await run_tool(ctx, "slow", {})
     assert result.category == "timeout" and result.retryable
+    assert monotonic() - started >= ctx.timeout_s + 1.0
 
 
 async def test_exception(ctx, monkeypatch):

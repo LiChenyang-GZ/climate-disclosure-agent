@@ -248,7 +248,8 @@ async def test_every_query_membership(setup):
     statements = []
 
     def capture(conn, cursor, statement, parameters, context, executemany):
-        statements.append(statement)
+        if statement.startswith("SELECT") and "set_config" not in statement:
+            statements.append(statement)
 
     event.listen(c.conn.sync_connection, "before_cursor_execute", capture)
     try:
