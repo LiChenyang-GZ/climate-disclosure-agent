@@ -47,7 +47,7 @@ async def test_timeout(ctx, monkeypatch):
     started = monotonic()
     result = await run_tool(ctx, "slow", {})
     assert result.category == "timeout" and result.retryable
-    assert monotonic() - started >= ctx.timeout_s + 1.0
+    assert monotonic() - started >= ctx.timeout_s + 1.0 - 0.05  # Windows timer resolution
 
 
 async def test_exception(ctx, monkeypatch):
