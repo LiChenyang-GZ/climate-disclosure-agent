@@ -3,8 +3,12 @@
 import re
 from collections import Counter
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from cda.db.enums import PageHalf
+
+if TYPE_CHECKING:
+    from cda.parsing.tables import TableData
 
 
 @dataclass(frozen=True)
@@ -16,6 +20,7 @@ class Block:
     text: str
     font_size: float
     bold: bool
+    table: "TableData | None" = None
 
 
 MarginKey = tuple[PageHalf | None, str, int]

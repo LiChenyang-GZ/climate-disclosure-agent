@@ -19,6 +19,7 @@ from cda.parsing.layout import (
     reading_order,
     recurring_margins,
 )
+from cda.parsing.tables import covered, detect_tables
 from cda.parsing.units import ParsedUnit, build_units
 
 
@@ -93,6 +94,8 @@ def parse_pdf(
             start = clock()
             page = doc.load_page(index)  # type: ignore[no-untyped-call]
             blocks = extract_blocks(page.get_text("dict"))
+            tables = detect_tables(page)
+            blocks = [b for b in blocks if not any(covered(b, t) for t in tables)] + tables
             areas.append(page_areas(blocks, page.rect.width, page.rect.height))
             heights.append(page.rect.height)
             if clock() - start > page_timeout_s:
@@ -102,22 +105,28 @@ def parse_pdf(
         ):
             raise ParseError("no_text_layer")
         dropped = recurring_margins(
-            [[(half, b) for half, _, _, blocks in groups for b in blocks] for groups in areas],
+            [
+                [(half, b) for half, _, _, blocks in groups for b in blocks if b.table is None]
+                for groups in areas
+            ],
             heights,
         )
         pages = []
         for index, (groups, height) in enumerate(zip(areas, heights, strict=True), 1):
             for half, x0, x1, blocks in groups:
-                printed = printed_page(blocks, height, half, dropped)
+                printed = printed_page(
+                    [b for b in blocks if b.table is None], height, half, dropped
+                )
                 kept = [
                     b
                     for b in blocks
-                    if not (is_margin(b, height) and margin_key(b, half) in dropped)
+                    if b.table is not None
+                    or not (is_margin(b, height) and margin_key(b, half) in dropped)
                 ]
                 pages.append((index, half, printed, reading_order(kept, x0, x1)))
         return ParsedDocument(
             hashlib.sha256(content).hexdigest(),
             doc.page_count,
-            f"cda-parse-1/pymupdf-{pymupdf.VersionBind}",
+            f"cda-parse-2/pymupdf-{pymupdf.VersionBind}",
             build_units(pages),
         )
