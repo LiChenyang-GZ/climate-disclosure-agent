@@ -395,7 +395,7 @@ async def test_missing_unit(harness, monkeypatch):
 def test_prompt_hash(tmp_path):
     from cda.agent.prompts import prompt_sha256
 
-    for name in ["worker_system.md", "worker_check.md"]:
+    for name in ["worker_system.md", "worker_check.md", "method_b_system.md", "method_b_check.md"]:
         (tmp_path / name).write_text(name)
     before = prompt_sha256(tmp_path)
     assert prompt_sha256(tmp_path) == before

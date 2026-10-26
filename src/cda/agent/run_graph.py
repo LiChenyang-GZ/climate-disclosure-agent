@@ -27,6 +27,7 @@ from cda.indexing.embed import Embedder
 from cda.llm.client import LLMClient
 from cda.llm.cost import ModelTable
 from cda.llm.types import LLMAuthError, LLMResponse, Message, ToolSpec
+from cda.methods.method_b import run_method_b
 
 
 @dataclass
@@ -43,6 +44,8 @@ class RunDeps:
     token_cap: int = 60_000
     max_output_tokens: int = 2000
     tool_timeout_s: float = 10.0
+    b_top_k: int = 10
+    b_min_vector_score: float | None = None
     reraise: tuple[type[BaseException], ...] = ()
 
 
@@ -111,7 +114,7 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                 return {}
             error = (
                 "method_not_supported"
-                if r.method not in ("A", "C")
+                if r.method not in ("A", "B", "C")
                 else "check_set_changed"
                 if r.check_set_version != cs.version
                 else "prompt_changed"
@@ -178,8 +181,14 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                 try:
                     # T11 state contains a live connection. Do not inherit the outer
                     # graph's checkpoint context into that ephemeral worker graph.
+                    worker = run_method_b if r.method == "B" else run_worker
+                    options = (
+                        {"top_k": deps.b_top_k, "min_vector_score": deps.b_min_vector_score}
+                        if r.method == "B"
+                        else {}
+                    )
                     result = await asyncio.create_task(
-                        run_worker(
+                        worker(
                             WorkerDeps(
                                 llm=llm,
                                 models=deps.models,
@@ -189,7 +198,7 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                                 user_id=r.created_by,
                                 pack_id=r.pack_id,
                                 run_id=run_id,
-                                method=cast(Literal["A", "C"], r.method),
+                                method=cast(Literal["A", "B", "C"], r.method),
                                 embedder=deps.embedder,
                                 budget=budget,
                                 step_cap=deps.step_cap,
@@ -199,6 +208,7 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                             ),
                             next(c for c in cs.checks if c.id == cid),
                             cs,
+                            **options,
                         ),
                         context=Context(),
                     )
