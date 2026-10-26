@@ -539,7 +539,7 @@ class LLMCall(Base):
     model: Mapped[str] = mapped_column(Text(), nullable=False)
     prompt_sha256: Mapped[str] = mapped_column(CHAR(64), nullable=False)
     tools_sha256: Mapped[str] = mapped_column(CHAR(64), nullable=False)
-    temperature: Mapped[float] = mapped_column(REAL(), nullable=False)
+    temperature: Mapped[float | None] = mapped_column(REAL(), nullable=True)
     seed: Mapped[int | None] = mapped_column(Integer(), nullable=True)
     system_fingerprint: Mapped[str | None] = mapped_column(Text(), nullable=True)
     tokens_in: Mapped[int] = mapped_column(Integer(), nullable=False, server_default=sql_text("0"))
