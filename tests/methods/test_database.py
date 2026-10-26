@@ -7,7 +7,8 @@ import pytest
 from sqlalchemy import func, insert, select, text, update
 
 from cda.agent.run_graph import run_run
-from cda.db.models import Document, Finding, LLMCall, Run, Unit
+from cda.agent.store import store_finding
+from cda.db.models import Document, Evidence, Finding, LLMCall, Run, Unit
 from cda.indexing.embed import HashEmbedder
 from cda.methods.retrieval import RetrievalError, hybrid_search, load_context
 
@@ -127,6 +128,7 @@ async def test_run_dispatch(run_env, monkeypatch, method):
         ("happy", "evidence_found", None, 1),
         ("bad_quote", "needs_review", "quote_verification_failed", 1),
         ("outside_context", "needs_review", "quote_verification_failed", 1),
+        ("unknown_unit", "needs_review", "quote_verification_failed", 1),
         ("empty", "needs_review", "no_retrieval_hits", 0),
         ("threshold", "needs_review", "low_retrieval_score", 0),
         ("no_evidence", "no_evidence_found", None, 1),
@@ -151,6 +153,8 @@ async def test_database_worker(run_env, case, status, reason, calls):
         run = (await conn.execute(select(Run).where(Run.id == rid))).mappings().one()
         unit = (await conn.execute(select(Unit))).mappings().one()
         cited = unit.id
+        if case == "unknown_unit":
+            cited = uuid4()  # a unit id the model invented: no such row exists
         if case == "outside_context":
             cited = uuid4()
             await conn.execute(
@@ -246,3 +250,11 @@ async def test_database_worker(run_env, case, status, reason, calls):
         assert budget.spent == result.cost_usd and budget.reserved == 0
         if case == "outside_context":
             assert result.evidence[0].reason == "not_in_context"
+        if case == "unknown_unit":
+            # Regression: relabelling this as not_in_context made store_finding insert a
+            # dangling unit id and fail the whole run with IntegrityError.
+            assert result.evidence[0].reason == "unit_not_found"
+            fid = await store_finding(conn, rid, result)
+            assert not (
+                await conn.execute(select(Evidence).where(Evidence.finding_id == fid))
+            ).all()

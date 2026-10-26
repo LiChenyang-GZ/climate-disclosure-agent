@@ -96,9 +96,11 @@ async def run_single_call(
         items=[EvidenceItem(UUID(e.unit_id), e.quote, e.role) for e in parsed.evidence],
         timeout_s=deps.tool_timeout_s,
     )
+    # Keep the verifier's unit_not_found: store_finding skips those items. Relabelling a
+    # non-existent unit as not_in_context made it insert evidence with a dangling unit id.
     state.evidence = [
         replace(e, ok=False, reason="unit_not_found")
-        if i in bad_aliases
+        if i in bad_aliases or e.reason == "unit_not_found"
         else replace(e, ok=False, reason="not_in_context")
         if str(e.unit_id) not in context_ids
         else e
