@@ -73,3 +73,33 @@ def test_real_model():
         assert len(vector) == 384
         assert math.isclose(sum(x * x for x in vector), 1, abs_tol=1e-5)
     assert sum(x * y for x, y in zip(q, relevant)) > sum(x * y for x, y in zip(q, irrelevant))
+
+
+def test_bge_loads_once_across_threads(monkeypatch):
+    import threading
+    import time
+
+    from cda.indexing import embed
+
+    loads = []
+
+    class FakeModel:
+        def __init__(self, *args, **kwargs):
+            loads.append(1)
+            time.sleep(0.05)  # widen the race window
+
+        def encode(self, texts, **kwargs):
+            import numpy as np
+
+            return np.zeros((len(texts), 384))
+
+    monkeypatch.setattr(
+        embed, "import_module", lambda name: type("M", (), {"SentenceTransformer": FakeModel})
+    )
+    embedder = embed.BgeEmbedder()
+    threads = [threading.Thread(target=embedder.embed_query, args=("q",)) for _ in range(5)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert len(loads) == 1

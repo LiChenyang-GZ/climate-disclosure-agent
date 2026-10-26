@@ -383,3 +383,11 @@ async def test_messages_keep_tool_history(harness):
     assert requests[0]["messages"] == messages_payload(history)
     assert requests[0]["messages"][-1]["tool_call_id"] == "call_1"
     assert requests[0]["messages"][-2]["tool_calls"][0]["id"] == "call_1"
+
+
+@pytest.mark.parametrize(("key", "expected"), [("luna", "none"), ("sol", None)])
+async def test_reasoning_effort_from_model_config(harness, key, expected):
+    # gpt-6-luna rejects function tools on Chat Completions unless reasoning is off.
+    client, requests, _ = harness([(200, {}, reply())])
+    await client.complete(messages=MESSAGES, tools=TOOLS, model_key=key, seed=1)
+    assert requests[0].get("reasoning_effort") == expected

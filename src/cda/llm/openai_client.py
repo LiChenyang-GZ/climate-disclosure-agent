@@ -88,9 +88,12 @@ class OpenAIClient:
             if auth_failed:
                 raise LLMAuthError("LLM authentication or permission denied") from None
         assert self._client is not None
-        model = self._models[model_key].model
+        price = self._models[model_key]
+        model = price.model
         schemas = [strict_tool_schema(tool) for tool in tools]
         kwargs: dict[str, Any] = {}
+        if price.reasoning_effort is not None:
+            kwargs["reasoning_effort"] = price.reasoning_effort
         if tools:
             kwargs["tools"] = cast(list[ChatCompletionToolParam], schemas)
             kwargs["parallel_tool_calls"] = False

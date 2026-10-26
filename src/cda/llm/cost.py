@@ -4,6 +4,7 @@ import json
 import math
 from decimal import Decimal
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, RootModel
@@ -18,6 +19,9 @@ class ModelPrice(BaseModel):
     input: Decimal = Field(ge=0, allow_inf_nan=False)
     cached_input: Decimal = Field(ge=0, allow_inf_nan=False)
     output: Decimal = Field(ge=0, allow_inf_nan=False)
+    # Sent as reasoning_effort when set. gpt-6-luna only accepts function tools on Chat
+    # Completions with reasoning turned off ("none").
+    reasoning_effort: Literal["none", "low", "medium", "high", "xhigh"] | None = None
 
 
 class ModelTable(RootModel[dict[str, ModelPrice]]):

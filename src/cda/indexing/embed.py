@@ -3,6 +3,7 @@
 import hashlib
 import math
 import re
+import threading
 from importlib import import_module
 from typing import Any, Protocol
 
@@ -28,16 +29,22 @@ class BgeEmbedder:
         self.device = device
         self.batch_size = batch_size
         self._model: Any = None
+        self._lock = threading.Lock()
 
     def embed_passages(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
-        if self._model is None:
-            self._model = import_module("sentence_transformers").SentenceTransformer(
-                self.model_name, device=self.device
-            )
+        self.warm_up()
         vectors = self._model.encode(texts, batch_size=self.batch_size, normalize_embeddings=True)
         return [[float(value) for value in row] for row in vectors.tolist()]
+
+    def warm_up(self) -> None:
+        """Load the model once. Call at start-up: loading takes longer than a tool timeout."""
+        with self._lock:
+            if self._model is None:
+                self._model = import_module("sentence_transformers").SentenceTransformer(
+                    self.model_name, device=self.device
+                )
 
     def embed_query(self, text: str) -> list[float]:
         return self.embed_passages(
