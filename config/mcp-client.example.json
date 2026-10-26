@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "climate-disclosure-agent": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "<repo>",
+        "cda-mcp"
+      ],
+      "env": {
+        "CDA_MCP_USER": "sarah",
+        "DATABASE_URL": "postgresql+asyncpg://cda:cda@localhost:5433/cda"
+      }
+    }
+  }
+}

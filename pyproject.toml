@@ -28,7 +28,11 @@ dependencies = [
     "langgraph-checkpoint-postgres",
     "psycopg[binary]",
     "reportlab>=5.1.0",
+    "mcp<2",
 ]
+
+[project.scripts]
+cda-mcp = "cda.mcp_server.server:main"
 
 [dependency-groups]
 dev = [

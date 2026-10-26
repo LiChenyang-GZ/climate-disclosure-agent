@@ -9,15 +9,15 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
-from sqlalchemy import func, insert, select, text, update
+from sqlalchemy import insert, select, text, update
 from sqlalchemy.exc import IntegrityError
 
-from cda.api import deps
+from cda.api import deps, service
 from cda.api.deps import Actor, Conn, audit, lead
 from cda.api.errors import APIError, run_errors
 from cda.api.storage import document_path, safe_filename
 from cda.db.enums import DocumentKind
-from cda.db.models import Document, DocumentPart, Pack, Run, TeamMember, Unit
+from cda.db.models import Document, Pack, Run, TeamMember
 from cda.indexing.index import index_document
 from cda.parsing.parts import Part, replace_parts
 from cda.parsing.pdf import ParseError
@@ -52,62 +52,7 @@ async def document(conn: Conn, actor: Actor, pid: UUID, did: UUID) -> dict[str, 
 async def document_info(
     request: Request, conn: Conn, row: dict[str, Any], actor: Actor
 ) -> dict[str, Any]:
-    did = row["id"]
-    parts = (
-        (
-            await conn.execute(
-                deps.visible(
-                    select(DocumentPart)
-                    .join(Document, Document.id == DocumentPart.document_id)
-                    .join(Pack, Pack.id == Document.pack_id),
-                    actor["id"],
-                )
-                .where(Document.id == did, Document.deleted_at.is_(None))
-                .order_by(DocumentPart.first_pdf_page)
-            )
-        )
-        .mappings()
-        .all()
-    )
-    missing = (
-        await conn.execute(
-            deps.visible(
-                select(func.count())
-                .select_from(Unit)
-                .join(Document, Document.id == Unit.document_id)
-                .join(Pack, Pack.id == Document.pack_id),
-                actor["id"],
-            ).where(
-                Document.id == did,
-                Document.deleted_at.is_(None),
-                Unit.kind.in_(["paragraph", "table_row"]),
-                Unit.embedding.is_(None),
-            )
-        )
-    ).scalar_one()
-    count = (
-        await conn.execute(
-            deps.visible(
-                select(func.count())
-                .select_from(Unit)
-                .join(Document, Document.id == Unit.document_id)
-                .join(Pack, Pack.id == Document.pack_id),
-                actor["id"],
-            ).where(
-                Document.id == did, Document.deleted_at.is_(None), Unit.context_header.is_not(None)
-            )
-        )
-    ).scalar_one()
-    state = request.app.state.document_states.get(did)
-    if row["pack_id"] in request.app.state.indexing:
-        status = "indexing"
-    elif did in request.app.state.index_errors:
-        status = "failed"
-    elif not missing and (count or state == "done"):
-        status = "done"
-    else:
-        status = "pending"
-    return {**row, "parts": [dict(p) for p in parts], "index_status": status}
+    return await service.document_info(request.app.state.index_state, conn, row, actor)
 
 
 @router.post("/packs", status_code=201)
@@ -137,25 +82,7 @@ async def create_pack(body: PackInput, conn: Conn, actor: Actor) -> dict[str, An
 
 @router.get("/packs")
 async def list_packs(conn: Conn, actor: Actor) -> list[dict[str, Any]]:
-    count = (
-        select(func.count())
-        .select_from(Document)
-        .where(Document.pack_id == Pack.id, Document.deleted_at.is_(None))
-        .correlate(Pack)
-        .scalar_subquery()
-    )
-    rows = (
-        (
-            await conn.execute(
-                deps.visible(select(Pack, count.label("document_count")), actor["id"]).order_by(
-                    Pack.created_at, Pack.id
-                )
-            )
-        )
-        .mappings()
-        .all()
-    )
-    return [dict(r) for r in rows]
+    return await service.list_packs(conn, actor)
 
 
 @router.get("/packs/{pid}")
