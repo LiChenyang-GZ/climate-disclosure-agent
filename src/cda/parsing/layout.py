@@ -30,7 +30,8 @@ def page_areas(
     blocks: list[Block], width: float, height: float
 ) -> list[tuple[PageHalf | None, float, float, list[Block]]]:
     mid = width / 2
-    if width / height >= 1.3 and not any(b.x0 < mid - 2 and b.x1 > mid + 2 for b in blocks):
+    text_blocks = [b for b in blocks if b.table is None]
+    if width / height >= 1.3 and not any(b.x0 < mid - 2 and b.x1 > mid + 2 for b in text_blocks):
         return [
             ("left", 0, mid, [b for b in blocks if (b.x0 + b.x1) / 2 < mid]),
             ("right", mid, width, [b for b in blocks if (b.x0 + b.x1) / 2 >= mid]),

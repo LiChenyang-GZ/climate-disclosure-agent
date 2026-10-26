@@ -234,6 +234,32 @@ def test_spread_pdf(tmp_path):
     assert [u.text for u in units][:2] == ["Left column body.", "24"]
 
 
+def test_landscape_body_crossing_middle(tmp_path):
+    path = tmp_path / "landscape.pdf"
+    with pymupdf.open() as doc:
+        page = doc.new_page(width=1000, height=707)
+        page.insert_text((450, 150), "Body paragraph running across the middle.", fontsize=10)
+        doc.save(path)
+    units = parse_pdf(path).units
+    assert units and all(u.page_half is None for u in units)
+
+
+@pytest.mark.parametrize("side", ["left", "right"])
+def test_spread_text_touches_middle(tmp_path, side):
+    path = tmp_path / "middle.pdf"
+    with pymupdf.open() as doc:
+        page = doc.new_page(width=1000, height=707)
+        text = "Text touching middle"
+        x = 500 - pymupdf.get_text_length(text, fontsize=10) if side == "left" else 500
+        page.insert_text((x, 150), text, fontsize=10)
+        block = page.get_text("blocks")[0]
+        assert block[2 if side == "left" else 0] == pytest.approx(500, abs=0.001)
+        doc.save(path)
+    units = parse_pdf(path).units
+    assert units and all(u.page_half == side for u in units)
+    assert [u.text for u in units] == [text]
+
+
 def test_heading_tree_and_empty():
     from cda.parsing.units import build_units
 
