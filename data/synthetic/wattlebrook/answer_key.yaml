@@ -246,7 +246,7 @@ cells:
   - document: wattlebrook-climate-data-supplement-2026.pdf
     part: other
     pdf_page: 2
-    quote: Scope 1
+    quote: Scope 1 gross
     role: primary
     source_type: table
     difficulty: table
@@ -507,7 +507,7 @@ planted_issues:
   - document: wattlebrook-climate-data-supplement-2026.pdf
     part: other
     pdf_page: 2
-    quote: Scope 1
+    quote: Scope 1 gross
     role: primary
     source_type: table
     difficulty: table

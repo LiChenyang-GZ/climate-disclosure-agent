@@ -570,7 +570,9 @@ async def test_event_order(run_env, review):
     assert events[-1][1] == ("run_waiting_review" if review else "run_final")
     for cid in run_env[3].calls:
         kinds = [kind for c, kind, p in events if c == cid]
-        assert kinds == ["check_started", "check_finished"]
+        # T18: agent tool calls are recorded as tool_called events inside their check.
+        assert [k for k in kinds if k != "tool_called"] == ["check_started", "check_finished"]
+        assert all(k == "tool_called" for k in kinds[1:-1])
         assert next(p for c, k, p in events if c == cid and k == "check_finished")["status"]
 
 
