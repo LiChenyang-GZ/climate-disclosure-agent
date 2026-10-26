@@ -232,7 +232,9 @@ async def test_step_cap(harness, submit):
 
 
 async def test_token_cap(harness):
-    r, _llm = await run(harness, [turn("list_documents", {}, usage=Usage(59000, 1, 0)), turn()])
+    # Usage just under the default cap (D79), so the next call would cross it.
+    near_cap = WorkerDeps.__dataclass_fields__["token_cap"].default - 1000
+    r, _llm = await run(harness, [turn("list_documents", {}, usage=Usage(near_cap, 1, 0)), turn()])
     assert r.needs_review_reason == "cap_hit"
 
 
