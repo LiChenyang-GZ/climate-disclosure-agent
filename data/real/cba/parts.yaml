@@ -1,0 +1,21 @@
+# Two-page spreads: one PDF page holds two printed pages (left, right).
+# Sustainability Report: printed 90-143 = PDF 47-73.
+# Sustainability Report Appendix (printed 353-382) and audit and assurance reports
+# (printed 383-394) = PDF 178-198. PDF 178's left half is printed 352 (profit
+# reconciliation) and PDF 199's left half is printed 394 (last assurance page); ranges
+# are whole PDF pages, so the first is included and the second left out.
+documents:
+- filename: CBA-2026-Annual-Report.pdf
+  kind: annual
+  parts:
+  - kind: sustainability
+    first_pdf_page: 47
+    last_pdf_page: 73
+    label: Sustainability Report (climate statements)
+  - kind: sustainability
+    first_pdf_page: 178
+    last_pdf_page: 198
+    label: Sustainability Report Appendix and assurance reports
+- filename: CBA-2026-GRI-and-SASB-Reporting.pdf
+  kind: other
+  parts: []

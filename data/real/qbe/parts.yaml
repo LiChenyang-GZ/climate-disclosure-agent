@@ -1,0 +1,13 @@
+# PDF page = printed page + 2. Section 3 "Sustainability Report" (printed 22-55):
+# climate statements, directors' declaration, auditor's review report.
+documents:
+- filename: 2025-qbe-annual-report---with-signatures(11277941).pdf
+  kind: annual
+  parts:
+  - kind: sustainability
+    first_pdf_page: 24
+    last_pdf_page: 57
+    label: Sustainability Report (climate statements)
+- filename: qbe-2025-impact-report.pdf
+  kind: other
+  parts: []

@@ -1,0 +1,13 @@
+# PDF page = printed page + 2. "Sustainability report" (printed 37-65): climate-related
+# statements, supporting notes, director's declaration, review and assurance reports.
+documents:
+- filename: iag-fy26-annual-report.pdf
+  kind: annual
+  parts:
+  - kind: sustainability
+    first_pdf_page: 39
+    last_pdf_page: 67
+    label: Sustainability report (climate-related statements)
+- filename: iag-climate-action-plan-towards-fy30-2nd-edition.pdf
+  kind: other
+  parts: []

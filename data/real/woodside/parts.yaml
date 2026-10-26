@@ -1,0 +1,13 @@
+# PDF page = printed page + 2. Section 3.6 "Sustainability Report" (printed 40-97),
+# including the AASB S2 index (PDF 92-94), directors' declaration and auditors' report.
+documents:
+- filename: annual-report-2025.pdf
+  kind: annual
+  parts:
+  - kind: sustainability
+    first_pdf_page: 42
+    last_pdf_page: 99
+    label: 3.6 Sustainability Report (climate statements)
+- filename: 2025-climate-and-sustainability-summary.pdf
+  kind: other
+  parts: []
