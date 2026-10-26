@@ -1,4 +1,4 @@
-"""OpenAI Chat Completions adapter with bounded application-owned retries."""
+"""OpenAI Responses adapter with bounded application-owned retries."""
 
 import asyncio
 import random
@@ -8,12 +8,11 @@ from typing import Any, cast
 
 import httpx
 import openai
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionToolParam
+from openai.types.responses import ResponseInputParam
 from tenacity import AsyncRetrying, RetryCallState, retry_if_exception_type, stop_after_attempt
 
 from cda.llm.cost import ModelTable
-from cda.llm.fingerprint import make_fingerprint, messages_payload
-from cda.llm.schema import strict_tool_schema
+from cda.llm.fingerprint import make_fingerprint, messages_payload, tools_payload
 from cda.llm.types import (
     LLMAuthError,
     LLMBadRequest,
@@ -90,17 +89,17 @@ class OpenAIClient:
         assert self._client is not None
         price = self._models[model_key]
         model = price.model
-        schemas = [strict_tool_schema(tool) for tool in tools]
+        schemas = tools_payload(tools)
         kwargs: dict[str, Any] = {}
         if price.reasoning_effort is not None:
-            kwargs["reasoning_effort"] = price.reasoning_effort
+            kwargs["reasoning"] = {"effort": price.reasoning_effort}
         if tools:
-            kwargs["tools"] = cast(list[ChatCompletionToolParam], schemas)
+            kwargs["tools"] = schemas
             kwargs["parallel_tool_calls"] = False
             kwargs["tool_choice"] = (
                 tool_choice
                 if tool_choice in {"auto", "required"}
-                else {"type": "function", "function": {"name": tool_choice}}
+                else {"type": "function", "name": tool_choice}
             )
         started = time.perf_counter()
         error: LLMError | None = None
@@ -113,12 +112,11 @@ class OpenAIClient:
                 reraise=True,
             ):
                 with attempt:
-                    completion = await self._client.chat.completions.create(
+                    completion = await self._client.responses.create(
                         model=model,
-                        messages=cast(list[ChatCompletionMessageParam], messages_payload(messages)),
-                        temperature=0,
-                        seed=seed,
-                        max_completion_tokens=max_output_tokens,
+                        input=cast(ResponseInputParam, messages_payload(messages)),
+                        store=False,
+                        max_output_tokens=max_output_tokens,
                         **kwargs,
                     )
         except (openai.AuthenticationError, openai.PermissionDeniedError):
@@ -130,24 +128,33 @@ class OpenAIClient:
         if error is not None:
             # Raise outside the SDK exception handler: no sensitive chained context.
             raise error from None
-        choice = completion.choices[0]
         calls = [
-            ToolCall(call.id, call.function.name, call.function.arguments)
-            for call in choice.message.tool_calls or []
-            if call.type == "function"
+            ToolCall(item.call_id, item.name, item.arguments)
+            for item in completion.output
+            if item.type == "function_call"
         ]
+        content = "".join(
+            part.text
+            for item in completion.output
+            if item.type == "message"
+            for part in item.content
+            if part.type == "output_text"
+        )
+        finish_reason: str = completion.status or "completed"
+        if completion.status == "incomplete" and completion.incomplete_details:
+            finish_reason = completion.incomplete_details.reason or finish_reason
         usage = completion.usage
-        details = usage.prompt_tokens_details if usage else None
+        details = usage.input_tokens_details if usage else None
         return LLMResponse(
-            message=Message("assistant", choice.message.content, calls),
-            finish_reason=choice.finish_reason,
+            message=Message("assistant", content or None, calls),
+            finish_reason="tool_calls" if calls else finish_reason,
             usage=Usage(
-                usage.prompt_tokens if usage else 0,
-                usage.completion_tokens if usage else 0,
+                usage.input_tokens if usage else 0,
+                usage.output_tokens if usage else 0,
                 (details.cached_tokens or 0) if details else 0,
             ),
             model=completion.model,
-            system_fingerprint=completion.system_fingerprint,
+            system_fingerprint=None,
             latency_ms=int((time.perf_counter() - started) * 1000),
             fingerprint=make_fingerprint(model, messages, tools, seed),
         )

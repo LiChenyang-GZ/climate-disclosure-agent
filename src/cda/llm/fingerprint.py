@@ -16,30 +16,40 @@ class RequestFingerprint:
     model: str
     prompt_sha256: str
     tools_sha256: str
-    temperature: float
+    temperature: float | None
     seed: int | None
 
 
 def messages_payload(messages: list[Message]) -> list[dict[str, Any]]:
-    result = []
+    result: list[dict[str, Any]] = []
     for message in messages:
-        row: dict[str, Any] = {"role": message.role, "content": message.content}
-        if message.tool_call_id is not None:
-            row["tool_call_id"] = message.tool_call_id
-        if message.tool_calls:
-            row["tool_calls"] = [
+        if message.role == "tool":
+            result.append(
                 {
-                    "id": call.id,
-                    "type": "function",
-                    "function": {
-                        "name": call.name,
-                        "arguments": _canonical_arguments(call.arguments),
-                    },
+                    "type": "function_call_output",
+                    "call_id": message.tool_call_id,
+                    "output": message.content,
                 }
-                for call in message.tool_calls
-            ]
-        result.append(row)
+            )
+            continue
+        if message.role != "assistant" or message.content is not None:
+            result.append({"role": message.role, "content": message.content})
+        for call in message.tool_calls:
+            result.append(
+                {
+                    "type": "function_call",
+                    "call_id": call.id,
+                    "name": call.name,
+                    "arguments": _canonical_arguments(call.arguments),
+                }
+            )
     return result
+
+
+def tools_payload(tools: list[ToolSpec]) -> list[dict[str, Any]]:
+    from cda.llm.schema import strict_tool_schema
+
+    return [{"type": "function", **strict_tool_schema(tool)["function"]} for tool in tools]
 
 
 def _canonical_arguments(raw: str) -> str:
@@ -60,9 +70,5 @@ def _hash(value: object) -> str:
 def make_fingerprint(
     model: str, messages: list[Message], tools: list[ToolSpec], seed: int | None
 ) -> RequestFingerprint:
-    from cda.llm.schema import strict_tool_schema
-
     payload = messages_payload(messages)
-    return RequestFingerprint(
-        model, _hash(payload), _hash([strict_tool_schema(t) for t in tools]), 0.0, seed
-    )
+    return RequestFingerprint(model, _hash(payload), _hash(tools_payload(tools)), None, None)

@@ -22,6 +22,8 @@ async def test_record_call(db, rows):
         assert stored[key] == value
     for key, value in asdict(response.usage).items():
         assert stored[key] == value
+    assert stored["temperature"] is None
+    assert stored["seed"] is None
     assert stored["run_id"] == rows["run"]
     assert stored["check_id"] == "C1"
     assert stored["step"] == 2

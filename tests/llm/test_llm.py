@@ -85,28 +85,42 @@ def test_parse_wrong_type():
 
 
 def reply(*, tool=False, cached=True):
-    message = {"role": "assistant", "content": None if tool else "Done"}
+    output = [{"type": "reasoning", "id": "rs_1", "summary": []}]
     if tool:
-        message["tool_calls"] = [
+        output.append(
             {
-                "id": "server_id",
-                "type": "function",
-                "function": {"name": "find", "arguments": '{"children":[]}'},
+                "type": "function_call",
+                "id": "fc_1",
+                "call_id": "server_id",
+                "name": "find",
+                "arguments": '{"children":[]}',
             }
-        ]
-    usage = {"prompt_tokens": 100, "completion_tokens": 20, "total_tokens": 120}
-    if cached:
-        usage["prompt_tokens_details"] = {"cached_tokens": 40}
+        )
+    else:
+        for i, text in enumerate(["Do", "ne"]):
+            output.append(
+                {
+                    "type": "message",
+                    "id": f"msg_{i}",
+                    "role": "assistant",
+                    "status": "completed",
+                    "content": [{"type": "output_text", "text": text, "annotations": []}],
+                }
+            )
     return {
-        "id": "chatcmpl-test",
-        "object": "chat.completion",
-        "created": 1,
+        "id": "resp_test",
+        "object": "response",
+        "created_at": 1,
         "model": "gpt-6.1-sol",
-        "system_fingerprint": "fp_test",
-        "usage": usage,
-        "choices": [
-            {"index": 0, "message": message, "finish_reason": "tool_calls" if tool else "stop"}
-        ],
+        "status": "completed",
+        "output": output,
+        "usage": {
+            "input_tokens": 100,
+            "output_tokens": 20,
+            "total_tokens": 120,
+            "input_tokens_details": {"cached_tokens": 40 if cached else 0},
+            "output_tokens_details": {"reasoning_tokens": 10},
+        },
     }
 
 
@@ -119,6 +133,7 @@ def harness(monkeypatch):
         requests, sleeps = [], []
 
         async def handler(request):
+            assert request.url.path == "/v1/responses"
             requests.append(json.loads(request.content))
             item = script.pop(0)
             if isinstance(item, Exception):
@@ -140,8 +155,14 @@ def harness(monkeypatch):
 @pytest.mark.parametrize("choice", ["auto", "required", "find"])
 async def test_request(harness, choice):
     client, requests, _ = harness([(200, {}, reply())])
+    history = MESSAGES + [
+        Message(
+            "assistant", "Searching", [ToolCall("call_1", "find", '{"note":null,"children":[]}')]
+        ),
+        Message("tool", "Found", tool_call_id="call_1"),
+    ]
     result = await client.complete(
-        messages=MESSAGES,
+        messages=history,
         tools=TOOLS,
         model_key="sol",
         seed=42,
@@ -150,16 +171,36 @@ async def test_request(harness, choice):
     )
     request = requests[0]
     assert request["model"] == "gpt-6.1-sol"
-    assert request["temperature"] == 0
-    assert request["seed"] == 42
-    assert request["max_completion_tokens"] == 123
+    assert not {"temperature", "seed", "messages", "top_p"} & request.keys()
+    assert request["store"] is False
+    assert request["max_output_tokens"] == 123
     assert request["parallel_tool_calls"] is False
-    assert request["tools"] == [strict_tool_schema(TOOLS[0])]
-    assert request["messages"] == messages_payload(MESSAGES)
+    assert request["tools"] == [{"type": "function", **strict_tool_schema(TOOLS[0])["function"]}]
+    assert request["input"] == [
+        {"role": "system", "content": "Shared"},
+        {"role": "user", "content": "Find evidence"},
+        {"role": "assistant", "content": "Searching"},
+        {
+            "type": "function_call",
+            "call_id": "call_1",
+            "name": "find",
+            "arguments": '{"children":[],"note":null}',
+        },
+        {"type": "function_call_output", "call_id": "call_1", "output": "Found"},
+    ]
     assert request["tool_choice"] == (
-        choice if choice != "find" else {"type": "function", "function": {"name": "find"}}
+        choice if choice != "find" else {"type": "function", "name": "find"}
     )
-    assert result.fingerprint == make_fingerprint("gpt-6.1-sol", MESSAGES, TOOLS, 42)
+    assert result.fingerprint == make_fingerprint("gpt-6.1-sol", history, TOOLS, 42)
+    import hashlib
+
+    for field, payload in [("prompt_sha256", request["input"]), ("tools_sha256", request["tools"])]:
+        assert (
+            getattr(result.fingerprint, field)
+            == hashlib.sha256(
+                json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
+        )
 
 
 @pytest.mark.parametrize("tool,cached", [(False, True), (True, False)])
@@ -169,10 +210,13 @@ async def test_response_and_no_tools(harness, tool, cached):
     assert "tools" not in requests[0]
     assert "tool_choice" not in requests[0]
     assert result.usage == Usage(100, 20, 40 if cached else 0)
-    assert result.system_fingerprint == "fp_test"
+    assert result.system_fingerprint is None
+    assert cost_usd(ModelTable.load()["sol"], result.usage) == (
+        Decimal("0.000324") if cached else Decimal("0.000400")
+    )
     assert result.model == "gpt-6.1-sol"
     assert result.latency_ms >= 0
-    assert result.finish_reason == ("tool_calls" if tool else "stop")
+    assert result.finish_reason == ("tool_calls" if tool else "completed")
     if tool:
         assert result.message.tool_calls == [ToolCall("server_id", "find", '{"children":[]}')]
     else:
@@ -244,9 +288,11 @@ def test_fingerprint():
         make_fingerprint("sol", [Message("user", "changed")], TOOLS, 42),
         make_fingerprint("sol", MESSAGES, [replace(TOOLS[0], description="new")], 42),
         make_fingerprint("luna", MESSAGES, TOOLS, 42),
-        make_fingerprint("sol", MESSAGES, TOOLS, 43),
     ]:
         assert changed != baseline
+    assert baseline.temperature is None
+    assert baseline.seed is None
+    assert baseline == make_fingerprint("sol", MESSAGES, TOOLS, 43)
     a = Message("assistant", None, [ToolCall("1", "find", '{"b":2,"a":1}')])
     b = Message("assistant", None, [ToolCall("1", "find", '{"a":1,"b":2}')])
     assert make_fingerprint("sol", [a], [], None) == make_fingerprint("sol", [b], [], None)
@@ -380,14 +426,43 @@ async def test_messages_keep_tool_history(harness):
     ]
     client, requests, _ = harness([(200, {}, reply())])
     await client.complete(messages=history, tools=TOOLS, model_key="sol")
-    assert requests[0]["messages"] == messages_payload(history)
-    assert requests[0]["messages"][-1]["tool_call_id"] == "call_1"
-    assert requests[0]["messages"][-2]["tool_calls"][0]["id"] == "call_1"
+    assert requests[0]["input"] == messages_payload(history)
+    assert requests[0]["input"][-1] == {
+        "type": "function_call_output",
+        "call_id": "call_1",
+        "output": "Found evidence",
+    }
+    assert requests[0]["input"][-2] == {
+        "type": "function_call",
+        "call_id": "call_1",
+        "name": "find",
+        "arguments": '{"children":[]}',
+    }
 
 
-@pytest.mark.parametrize(("key", "expected"), [("luna", "none"), ("sol", None)])
+@pytest.mark.parametrize(("key", "expected"), [("luna", "none"), ("sol", "low"), ("unset", None)])
 async def test_reasoning_effort_from_model_config(harness, key, expected):
-    # gpt-6-luna rejects function tools on Chat Completions unless reasoning is off.
     client, requests, _ = harness([(200, {}, reply())])
+    if key == "unset":
+        client._models.root[key] = client._models["sol"].model_copy(
+            update={"reasoning_effort": None}
+        )
     await client.complete(messages=MESSAGES, tools=TOOLS, model_key=key, seed=1)
-    assert requests[0].get("reasoning_effort") == expected
+    assert requests[0].get("reasoning") == ({"effort": expected} if expected else None)
+
+
+async def test_incomplete(harness):
+    body = reply()
+    body.update(status="incomplete", incomplete_details={"reason": "max_output_tokens"})
+    client, _, _ = harness([(200, {}, body)])
+    result = await client.complete(messages=MESSAGES, tools=[], model_key="sol")
+    assert result.finish_reason == "max_output_tokens"
+
+
+async def test_three_server_errors(harness):
+    client, requests, sleeps = harness([(500, {}, {})] * 3)
+    client._max_retries = 2
+    with pytest.raises(LLMRetryExhausted):
+        await client.complete(messages=MESSAGES, tools=[], model_key="sol")
+    assert len(requests) == 3
+    assert len(sleeps) == 2
