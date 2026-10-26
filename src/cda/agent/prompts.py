@@ -8,12 +8,21 @@ from typing import Any
 
 from cda.checks.models import Check
 
-_NAMES = ("worker_system.md", "worker_check.md", "method_b_system.md", "method_b_check.md")
+_NAMES = (
+    "worker_system.md",
+    "worker_check.md",
+    "method_b_system.md",
+    "method_b_check.md",
+    "lc_system.md",
+    "lc_check.md",
+)
 
 
 def _read(name: str, directory: Path | None = None) -> bytes:
     if directory is not None:
-        return (directory / name).read_bytes()
+        override = directory / name
+        if override.exists():
+            return override.read_bytes()
     return files("cda.agent").joinpath("prompts", name).read_bytes()
 
 
@@ -45,4 +54,16 @@ def render_method_b(check: Check, context: list[dict[str, Any]]) -> tuple[str, s
     values["context"] = "\n\n".join(blocks)
     return _read("method_b_system.md").decode(), _read("method_b_check.md").decode().format(
         **values
+    )
+
+
+def render_lc(check: Check, pack_text: str) -> tuple[str, str, str]:
+    values = {
+        k: json.dumps(v, ensure_ascii=False) if isinstance(v, list) else v
+        for k, v in check.model_dump().items()
+    }
+    return (
+        _read("lc_system.md").decode(),
+        pack_text,
+        _read("lc_check.md").decode().format(**values),
     )

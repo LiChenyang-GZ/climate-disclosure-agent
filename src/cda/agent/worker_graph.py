@@ -46,9 +46,10 @@ class WorkerDeps:
     user_id: UUID
     pack_id: UUID
     run_id: UUID
-    method: Literal["A", "B", "C"]
+    method: Literal["A", "B", "C", "LC"]
     embedder: Embedder | None
     budget: Budget
+    lc_pack: Any = None
     step_cap: int = 12
     token_cap: int = 60_000
     max_output_tokens: int = 2000

@@ -21,6 +21,8 @@ from cda.checks.loader import load_check_set
 from cda.db.models import (
     CheckSet,
     Document,
+    Evidence,
+    Fact,
     Finding,
     LLMCall,
     Pack,
@@ -210,12 +212,179 @@ async def test_queued_finishes(run_env):
         assert r.spent_usd == await c.scalar(select(func.sum(LLMCall.cost_usd)))
 
 
-@pytest.mark.parametrize("method", ["LC"])
-async def test_unsupported_method(run_env, method):
-    await change(run_env, method=method)
-    assert await execute(run_env) == "failed"
-    assert (await row(run_env)).error == "method_not_supported"
-    assert not run_env[3].calls
+class RepeatingClient:
+    def __init__(self, unit_id, *, method):
+        self.unit_id = unit_id
+        self.method = method
+        self.requests = []
+        self.calls = Counter()
+
+    async def complete(self, **kwargs):
+        from cda.llm.fake import FakeTurn
+
+        self.requests.append(kwargs)
+        if self.method == "LC":
+            turn = FakeTurn(
+                tool_calls=[
+                    (
+                        "submit_finding",
+                        {
+                            "status": "evidence_found",
+                            "rationale": "Found the cited report text.",
+                            "missing_aspects": [],
+                            "relief_applied": False,
+                            "relief_id": None,
+                            "evidence": [
+                                {"unit_id": "u1", "quote": "climate risk", "role": "supports"}
+                            ],
+                            "facts": [],
+                        },
+                    )
+                ]
+            )
+        else:
+            cid = re.search(r"Check (\w+):", kwargs["messages"][1].content)[1]
+            self.calls[cid] += 1
+            if self.calls[cid] == 1:
+                turn = FakeTurn(tool_calls=[("semantic_search", {"query": "climate"})])
+            else:
+                turn = FakeTurn(
+                    tool_calls=[
+                        (
+                            "submit_finding",
+                            {
+                                "status": "evidence_found",
+                                "rationale": "Found the cited report text.",
+                                "missing_aspects": [],
+                                "relief_applied": False,
+                                "relief_id": None,
+                                "evidence": [
+                                    {
+                                        "unit_id": str(self.unit_id),
+                                        "quote": "climate risk",
+                                        "role": "supports",
+                                    }
+                                ],
+                                "facts": [],
+                            },
+                        )
+                    ]
+                )
+        return await FakeLLM([turn], ModelTable.load()).complete(**kwargs)
+
+
+async def test_lc_run_reuses_pack_and_calls_once_per_check(run_env, monkeypatch):
+    import cda.agent.run_graph as graph
+    import cda.methods.long_context as lc
+
+    checks = load_check_set()
+    monkeypatch.setattr(
+        graph, "load_check_set", lambda: checks.model_copy(update={"checks": checks.checks[:2]})
+    )
+    await change(run_env, method="LC")
+    llm = RepeatingClient(run_env[3].unit, method="LC")
+    run_env[2].llm = llm
+    query = lc._query_units
+    query_spy = AsyncMock(side_effect=query)
+    monkeypatch.setattr(lc, "_query_units", query_spy)
+
+    assert await execute(run_env) == "final"
+    assert len(await findings(run_env)) == 2
+    assert len(llm.requests) == 2
+    assert query_spy.await_count == 1
+    async with run_env[0].connect() as c:
+        assert await c.scalar(select(func.count()).select_from(LLMCall)) == 2
+
+
+@pytest.mark.parametrize("reference_kind", ["invented_alias", "raw_uuid"])
+async def test_lc_unknown_reference_waits_for_review_without_child_rows(
+    run_env, monkeypatch, reference_kind
+):
+    import cda.agent.run_graph as graph
+    from cda.llm.fake import FakeLLM, FakeTurn
+
+    checks = load_check_set()
+    check = checks.get("S4")
+    monkeypatch.setattr(
+        graph, "load_check_set", lambda: checks.model_copy(update={"checks": [check]})
+    )
+    await change(run_env, method="LC")
+    reference = "u999" if reference_kind == "invented_alias" else str(uuid4())
+    answer = {
+        "status": "evidence_found",
+        "rationale": "Attempted to cite a report passage.",
+        "missing_aspects": [],
+        "relief_applied": False,
+        "relief_id": None,
+        "evidence": [{"unit_id": reference, "quote": "climate risk", "role": "supports"}],
+        "facts": [
+            {
+                "name": "climate_financial_effect",
+                "value": 123,
+                "unit": "AUD",
+                "scope": "group",
+                "year": 2026,
+                "unit_id": reference,
+                "raw": "123 AUD",
+            }
+        ],
+    }
+    llm = FakeLLM([FakeTurn(tool_calls=[("submit_finding", answer)])])
+    run_env[2].llm = llm
+
+    assert await execute(run_env) == "waiting_review"
+    fs = await findings(run_env)
+    assert len(fs) == 1
+    assert (fs[0].status, fs[0].needs_review_reason) == (
+        "needs_review",
+        "quote_verification_failed",
+    )
+    async with run_env[0].connect() as c:
+        assert (
+            await c.scalar(
+                select(func.count()).select_from(Evidence).where(Evidence.finding_id == fs[0].id)
+            )
+            == 0
+        )
+        assert (
+            await c.scalar(
+                select(func.count()).select_from(Fact).where(Fact.finding_id == fs[0].id)
+            )
+            == 0
+        )
+        assert (
+            await c.scalar(
+                select(func.count()).select_from(LLMCall).where(LLMCall.run_id == run_env[1])
+            )
+            == 1
+        )
+
+
+async def test_c_run_records_semantic_search_coverage(run_env, monkeypatch):
+    import cda.agent.run_graph as graph
+    import cda.agent.worker_graph as worker
+
+    checks = load_check_set()
+    monkeypatch.setattr(
+        graph, "load_check_set", lambda: checks.model_copy(update={"checks": checks.checks[:2]})
+    )
+    await change(run_env, method="C")
+    llm = RepeatingClient(run_env[3].unit, method="C")
+    run_env[2].llm = llm
+    original = worker.run_tool
+    coverage = []
+
+    async def capture(ctx, name, args):
+        result = await original(ctx, name, args)
+        if name == "semantic_search":
+            coverage.append(set(ctx.coverage.queries))
+        return result
+
+    monkeypatch.setattr(worker, "run_tool", capture)
+    assert await execute(run_env) == "final"
+    assert len(await findings(run_env)) == 2
+    assert len(coverage) == 2
+    assert all(any(tool == "semantic_search" for tool, _, _ in scope) for scope in coverage)
 
 
 async def test_changed_check_set(run_env):
