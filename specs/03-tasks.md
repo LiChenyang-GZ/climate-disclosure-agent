@@ -29,10 +29,10 @@ Implementation is split into small tasks. Each task is one module plus its tests
 | T16 | Retrieval method B (classic RAG): hybrid search with RRF, retrieval quality threshold, single model call | T08, T07 | sol | normal | codex | 6 |
 | T17 | Method C (agent + semantic tool) and long-context baseline | T11, T16 | luna | normal | codex | 6 |
 | T18 | Evaluation harness: answer key format, status accuracy, evidence recall, citation accuracy, process metrics, injection as hard gate, Hit@K / MRR, repeated runs, `report.md` | T15, T17 | sol | normal | codex | 6 |
-| T19 | CI: ruff, mypy, pytest, retrieval eval on the synthetic company (no LLM calls) | T18 | luna | normal | codex | 6 |
-| T20 | REST API: packs, upload, parse, runs, findings, review (optimistic lock), export; demo-user header; idempotency key | T12, T14 | luna | normal | codex | 7 |
-| T21 | Langfuse tracing | T11 | luna | normal | codex | 7 |
-| T22 | MCP server (Python, stdio): read-only tools + `start_check`, same permission functions | T08, T20 | luna | normal | codex | 7 |
+| T19 | CI: ruff, mypy, pytest, retrieval eval on the synthetic company (no LLM calls) | T18 | sol | normal | codex | 6 |
+| T20 | REST API: packs, upload, parse, runs, findings, review (optimistic lock), export; demo-user header; idempotency key | T12, T14 | sol | normal | codex | 7 |
+| T21 | Langfuse tracing | T11 | sol | normal | codex | 7 |
+| T22 | MCP server (Python, stdio): read-only tools + `start_check`, same permission functions | T08, T20 | sol | normal | codex | 7 |
 | T23 | Real companies: confirm 4 ASX companies, download list, check text layer, write `parts.yaml` (PDF page ranges), ingest, update ASIC sources in `checks.yaml` to REP 839 after checking the PDF (D73), label evidence and run Christy's 12-cell blind check (D71); scale layer of 20–30 unlabelled reports (D72) | T06 | — | — | claude + Christy | 6–7 |
 | E1–E6 | Experiments (see decision cards): run against real and synthetic packs, fill results | T18, T23 | luna / sol | — | claude | by 30 Oct |
 
@@ -81,4 +81,4 @@ Section numbers refer to `02-design.md`; D-numbers to its decision digest (§15)
 
 ## Estimated OpenAI spend (Phase 1 coding)
 
-About 16 tasks on `sol` at roughly $1–2 each and 7 on `luna` at under $0.30 each: about **$18–33**. The budget is $25, so the estimate will be re-checked after batch 0 using the trial task's real cost, and more tasks will move to `luna` if needed.
+About 16 tasks on `sol` at roughly $1–2 each and 7 on `luna` at under $0.30 each: about **$18–33**. Actual after batch 6 (T17): $9.08 for T00–T17; from T19 on every task uses `sol` (Christy, 26 Oct), since luna was not cheaper on large tasks. The budget is $25, so the estimate will be re-checked after batch 0 using the trial task's real cost, and more tasks will move to `luna` if needed.
