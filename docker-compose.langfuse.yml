@@ -1,0 +1,45 @@
+# Start: docker compose -f docker-compose.yml -f docker-compose.langfuse.yml up
+# UI: http://localhost:3000 (local@example.com / local-password)
+services:
+  langfuse:
+    image: langfuse/langfuse:2
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: local-only-nextauth-secret
+      SALT: local-only-salt
+      TELEMETRY_ENABLED: 'false'
+      LANGFUSE_INIT_ORG_ID: local-org
+      LANGFUSE_INIT_ORG_NAME: Local
+      LANGFUSE_INIT_PROJECT_ID: local-project
+      LANGFUSE_INIT_PROJECT_NAME: Climate Disclosure
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: pk-lf-local
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: sk-lf-local
+      LANGFUSE_INIT_USER_EMAIL: local@example.com
+      LANGFUSE_INIT_USER_NAME: Local
+      LANGFUSE_INIT_USER_PASSWORD: local-password
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+  langfuse-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - langfuse_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U langfuse -d langfuse]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  worker:
+    environment:
+      LANGFUSE_HOST: http://langfuse:3000
+      LANGFUSE_PUBLIC_KEY: pk-lf-local
+      LANGFUSE_SECRET_KEY: sk-lf-local
+volumes:
+  langfuse_data:
