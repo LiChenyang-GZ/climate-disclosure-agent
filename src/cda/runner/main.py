@@ -19,6 +19,7 @@ from cda.agent.checkpoint import open_checkpointer
 from cda.agent.run_graph import RunDeps, run_run
 from cda.config import Settings
 from cda.db.session import make_engine
+from cda.indexing.embed import BgeEmbedder
 from cda.runner.claim import claim_next
 from cda.runner.deps import build_run_deps
 from cda.runner.events import EventSink
@@ -67,6 +68,9 @@ async def serve(
         await listener.add_listener(settings.notify_channel, notified)
         async with open_checkpointer(url) as saver:
             deps = deps_factory(settings, saver)
+            if isinstance(deps.embedder, BgeEmbedder):
+                # Load the model before claiming runs: loading takes longer than a tool timeout.
+                await asyncio.to_thread(deps.embedder.warm_up)
             try:
                 while not stop.is_set():
                     wake.clear()

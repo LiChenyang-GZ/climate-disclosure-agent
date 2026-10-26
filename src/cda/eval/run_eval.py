@@ -189,6 +189,8 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         raise ValueError("CDA_DATABASE_URL is required")
     engine = make_engine(url)
     embedder = HashEmbedder() if args.embedder == "hash" else BgeEmbedder()
+    if isinstance(embedder, BgeEmbedder):
+        await asyncio.to_thread(embedder.warm_up)
     key = load_answer_key(args.pack / "answer_key.yaml")
     cs = load_check_set()
     try:
