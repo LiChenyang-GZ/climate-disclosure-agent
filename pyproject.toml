@@ -12,6 +12,8 @@ dependencies = [
     "langfuse>=2.60,<3",
     "asyncpg",
     "fastapi",
+    "sse-starlette",
+    "python-multipart",
     "pgvector>=0.5.1",
     "pydantic-settings",
     "pymupdf<2",

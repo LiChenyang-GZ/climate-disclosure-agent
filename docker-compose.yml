@@ -30,9 +30,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["uvicorn", "cda.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["sh", "-c", "python -m cda.api.seed && uvicorn cda.api.app:app --host 0.0.0.0 --port 8000"]
+    volumes:
+      - uploads:/app/uploads
     environment:
       DATABASE_URL: postgresql+asyncpg://cda:cda@db:5432/cda
+      CDA_UPLOAD_DIR: /app/uploads
+      CDA_MAX_UPLOAD_MB: ${CDA_MAX_UPLOAD_MB:-50}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -57,3 +61,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads:
