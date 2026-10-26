@@ -10,6 +10,7 @@ COPY config ./config
 RUN uv sync --frozen --no-dev \
     && groupadd --gid 10001 cda \
     && useradd --uid 10001 --gid cda --create-home cda \
+    && mkdir -p /app/uploads \
     && chown -R cda:cda /app
 
 ENV PATH="/app/.venv/bin:$PATH"
