@@ -46,7 +46,7 @@ class WorkerDeps:
     user_id: UUID
     pack_id: UUID
     run_id: UUID
-    method: Literal["A", "C"]
+    method: Literal["A", "B", "C"]
     embedder: Embedder | None
     budget: Budget
     step_cap: int = 12

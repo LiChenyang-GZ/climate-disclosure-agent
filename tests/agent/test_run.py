@@ -210,7 +210,7 @@ async def test_queued_finishes(run_env):
         assert r.spent_usd == await c.scalar(select(func.sum(LLMCall.cost_usd)))
 
 
-@pytest.mark.parametrize("method", ["B", "LC"])
+@pytest.mark.parametrize("method", ["LC"])
 async def test_unsupported_method(run_env, method):
     await change(run_env, method=method)
     assert await execute(run_env) == "failed"
