@@ -9,6 +9,7 @@ description = "Climate Disclosure Agent"
 requires-python = ">=3.12"
 dependencies = [
     "alembic",
+    "langfuse>=2.60,<3",
     "asyncpg",
     "fastapi",
     "pgvector>=0.5.1",
