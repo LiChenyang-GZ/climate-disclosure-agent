@@ -1,6 +1,7 @@
 """Durable outer run graph, with independent database transactions per check."""
 
 import asyncio
+from collections.abc import Coroutine
 from contextvars import Context
 from dataclasses import dataclass
 from decimal import Decimal
@@ -27,7 +28,9 @@ from cda.indexing.embed import Embedder
 from cda.llm.client import LLMClient
 from cda.llm.cost import ModelTable
 from cda.llm.types import LLMAuthError, LLMResponse, Message, ToolSpec
+from cda.methods.long_context import LongContextPack, build_pack, run_long_context
 from cda.methods.method_b import run_method_b
+from cda.tools.context import ToolContext
 
 
 @dataclass
@@ -46,6 +49,8 @@ class RunDeps:
     tool_timeout_s: float = 10.0
     b_top_k: int = 10
     b_min_vector_score: float | None = None
+    lc_scope: Literal["pack", "sustainability"] = "pack"
+    lc_max_prompt_tokens: int = 200_000
     reraise: tuple[type[BaseException], ...] = ()
 
 
@@ -106,6 +111,9 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
     """Start a run or continue its durable checkpoint until completion or review."""
     cs = load_check_set()
     budget = RunBudget(engine, run_id)
+    lc_pack: LongContextPack | None = None
+    lc_pack_loaded = False
+    lc_pack_lock = asyncio.Lock()
 
     async def start(state: RunState) -> RunState:
         async with engine.begin() as conn:
@@ -114,7 +122,7 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                 return {}
             error = (
                 "method_not_supported"
-                if r.method not in ("A", "B", "C")
+                if r.method not in ("A", "B", "C", "LC")
                 else "check_set_changed"
                 if r.check_set_version != cs.version
                 else "prompt_changed"
@@ -147,6 +155,7 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
         return {"check_ids": [c.id for c in cs.checks if c.id not in stored]}
 
     async def check_worker(state: RunState) -> RunState:
+        nonlocal lc_pack, lc_pack_loaded
         cid = state["check_id"]
         async with engine.begin() as conn:
             if (
@@ -179,37 +188,58 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
             else:
                 llm = _RunLLM(engine, run_id, deps)
                 try:
+                    worker_deps = WorkerDeps(
+                        llm=llm,
+                        models=deps.models,
+                        model_key=r.model_key,
+                        seed=deps.seed,
+                        conn=conn,
+                        user_id=r.created_by,
+                        pack_id=r.pack_id,
+                        run_id=run_id,
+                        method=cast(Literal["A", "B", "C", "LC"], r.method),
+                        embedder=deps.embedder,
+                        budget=budget,
+                        step_cap=deps.step_cap,
+                        token_cap=deps.token_cap,
+                        max_output_tokens=deps.max_output_tokens,
+                        tool_timeout_s=deps.tool_timeout_s,
+                    )
                     # T11 state contains a live connection. Do not inherit the outer
                     # graph's checkpoint context into that ephemeral worker graph.
-                    worker = run_method_b if r.method == "B" else run_worker
-                    options = (
-                        {"top_k": deps.b_top_k, "min_vector_score": deps.b_min_vector_score}
-                        if r.method == "B"
-                        else {}
-                    )
-                    result = await asyncio.create_task(
-                        worker(
-                            WorkerDeps(
-                                llm=llm,
-                                models=deps.models,
-                                model_key=r.model_key,
-                                seed=deps.seed,
-                                conn=conn,
-                                user_id=r.created_by,
-                                pack_id=r.pack_id,
-                                run_id=run_id,
-                                method=cast(Literal["A", "B", "C"], r.method),
-                                embedder=deps.embedder,
-                                budget=budget,
-                                step_cap=deps.step_cap,
-                                token_cap=deps.token_cap,
-                                max_output_tokens=deps.max_output_tokens,
-                                tool_timeout_s=deps.tool_timeout_s,
-                            ),
+                    worker_call: Coroutine[Any, Any, WorkerResult]
+                    if r.method == "LC":
+                        async with lc_pack_lock:
+                            if not lc_pack_loaded:
+                                lc_pack = await build_pack(
+                                    ToolContext(
+                                        conn, r.created_by, r.pack_id, None, deps.tool_timeout_s
+                                    ),
+                                    deps.lc_scope,
+                                )
+                                lc_pack_loaded = True
+                        worker_deps.lc_pack = lc_pack
+                        worker_call = run_long_context(
+                            worker_deps,
                             next(c for c in cs.checks if c.id == cid),
                             cs,
-                            **options,
-                        ),
+                            scope=deps.lc_scope,
+                            max_prompt_tokens=deps.lc_max_prompt_tokens,
+                        )
+                    elif r.method == "B":
+                        worker_call = run_method_b(
+                            worker_deps,
+                            next(c for c in cs.checks if c.id == cid),
+                            cs,
+                            top_k=deps.b_top_k,
+                            min_vector_score=deps.b_min_vector_score,
+                        )
+                    else:
+                        worker_call = run_worker(
+                            worker_deps, next(c for c in cs.checks if c.id == cid), cs
+                        )
+                    result = await asyncio.create_task(
+                        worker_call,
                         context=Context(),
                     )
                 except LLMAuthError:

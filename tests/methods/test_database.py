@@ -93,6 +93,20 @@ async def test_run_dispatch(run_env, monkeypatch, method):
     )
     async with engine.begin() as conn:
         await conn.execute(update(Run).where(Run.id == rid).values(method=method))
+    if method == "LC":
+        from cda.llm.fake import FakeLLM, FakeTurn
+
+        answer = {
+            "status": "evidence_found",
+            "rationale": "Found the cited report text.",
+            "missing_aspects": [],
+            "relief_applied": False,
+            "relief_id": None,
+            "evidence": [{"unit_id": "u1", "quote": "climate risk", "role": "supports"}],
+            "facts": [],
+        }
+        llm = FakeLLM([FakeTurn(tool_calls=[("submit_finding", answer)]) for _ in range(2)])
+        deps.llm = llm
     status = await run_run(engine, rid, deps=deps)
     async with engine.connect() as conn:
         run = (await conn.execute(select(Run).where(Run.id == rid))).mappings().one()
@@ -100,16 +114,11 @@ async def test_run_dispatch(run_env, monkeypatch, method):
             (await conn.execute(select(Finding).where(Finding.run_id == rid))).mappings().all()
         )
         calls = (await conn.execute(select(LLMCall).where(LLMCall.run_id == rid))).mappings().all()
-    if method == "LC":
-        assert status == "failed" and run.error == "method_not_supported"
-        assert not findings and not llm.requests
-    else:
-        assert status == "final" and len(findings) == len(calls) == 2
-        assert all(
-            f.status == "evidence_found" and f.confidence == "high" and f.steps == 1
-            for f in findings
-        )
-        assert run.spent_usd == sum(c.cost_usd for c in calls)
+    assert status == "final" and len(findings) == len(calls) == 2
+    assert all(
+        f.status == "evidence_found" and f.confidence == "high" and f.steps == 1 for f in findings
+    )
+    assert run.spent_usd == sum(c.cost_usd for c in calls)
 
 
 @pytest.mark.parametrize(
