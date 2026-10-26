@@ -207,7 +207,13 @@ def test_database_gate(pg_url, monkeypatch, capsys):
 
     monkeypatch.setattr(OpenAIClient, "__init__", fail)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def gate_output():
+        # PyMuPDF prints a one-time hint on first use in a process; it depends on test order.
+        lines = capsys.readouterr().out.splitlines()
+        return [line for line in lines if "pymupdf_layout" not in line]
+
     assert ci_gate.main(["--database-url", pg_url]) == 0
-    first = capsys.readouterr().out
+    first = gate_output()
     assert ci_gate.main(["--database-url", pg_url]) == 0
-    assert capsys.readouterr().out == first
+    assert gate_output() == first
