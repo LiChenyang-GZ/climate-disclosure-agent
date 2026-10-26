@@ -2,7 +2,7 @@
 
 This is the source of truth for **how** the system is built. `01-requirements.md` says what it does; `03-tasks.md` says in what order it is built. If code and this file disagree, raise it in the PR — do not silently pick one.
 
-Decisions are numbered **D1–D76**. Task specs cite them by number (e.g. "follow D35, D58").
+Decisions are numbered **D1–D78**. Task specs cite them by number (e.g. "follow D35, D58").
 
 ## 1. Tech stack
 
@@ -14,11 +14,11 @@ Decisions are numbered **D1–D76**. Task specs cite them by number (e.g. "follo
 | Tests | `pytest`, `pytest-asyncio`; `testcontainers[postgres]` for DB tests | tests never call a real model (D-test rule below) |
 | API | FastAPI + Uvicorn; Pydantic v2 | SSE via `sse-starlette` |
 | DB | PostgreSQL 16 + `pgvector` (image `pgvector/pgvector:pg16`) | SQLAlchemy 2 (async, `asyncpg`) + Alembic |
-| Full-text search | Postgres `tsvector` (`english` config) + `ts_rank_cd` | not called BM25 (D35) |
+| Full-text search | Postgres `tsvector` (`english` config) + `ts_rank_cd`, OR over the query's terms (D77) | not called BM25 (D35) |
 | Embeddings | `BAAI/bge-small-en-v1.5` via `sentence-transformers`, 384 dims, run locally | used by methods B and C only (D10) |
 | PDF | PyMuPDF (`pymupdf`) | Docling only if parse tests fail (D32) |
 | Agent orchestration | LangGraph (`langgraph`, `langgraph-checkpoint-postgres`) | orchestration only; worker loop is explicit nodes (D67) |
-| LLM | `openai` Python SDK, Chat Completions with strict function calling | behind our own `LLMClient` interface (D46) |
+| LLM | `openai` Python SDK, Responses API with strict function tools (D78) | behind our own `LLMClient` interface (D46) |
 | Tracing | Langfuse (self-hosted in compose, optional profile) | D25 |
 | MCP | official `mcp` Python SDK, stdio transport | D13, D51 |
 | Config | `pydantic-settings`, `.env` (never committed) | |
@@ -164,7 +164,7 @@ build_prompt → call_model → (tool call?) ─yes→ run_tool → update_state
 - **Verification** (D17 option A, T10): each quote must appear verbatim in the cited unit after whitespace normalisation; a quote may span the cited unit and the next unit (page breaks); the unit must belong to the run's pack and be visible to the user.
 - **"No evidence found" rule** (D58): accepted only if `len(distinct normalised queries) ≥ min_searches` (default 4, per check in `checks.yaml`) **and** every non-deleted document in the pack was covered — counted per part where a document has parts (D69). Otherwise status becomes `Needs review` with reason `insufficient search`.
 - **Confidence** (D40): high = ≥1 verified quote, all documents covered, no cap hit; otherwise low. "No evidence" is always low.
-- Model settings: temperature 0, fixed seed, record `system_fingerprint` (D18, D48). Shared system prompt first for prompt caching (D27). Prompts are files under `agent/prompts/`; their SHA-256 is stored on the run (D39).
+- Model settings (D78, replacing D18 and the seed part of D48): the Responses API rejects `temperature` and `seed` for both models, so neither is sent; `reasoning.effort` comes from `config/models.yaml` (luna `none`, sol `low`); `llm_calls` keeps its columns, with temperature and seed stored as NULL. Run-to-run variation is measured by the 3 repeats (D48). Shared system prompt first for prompt caching (D27). Prompts are files under `agent/prompts/`; their SHA-256 is stored on the run (D39).
 - Reasoning goes in `rationale` only; no separate long chain-of-thought output (D30).
 
 ## 8. Run graph (T12)
@@ -188,7 +188,7 @@ build_prompt → call_model → (tool call?) ─yes→ run_tool → update_state
 
 No reranker in phase 1 (D9, experiment E3).
 
-Method B details (T16): the "description" query is the check `title` (the `requirement` text is too long for `websearch_to_tsquery`, which ANDs every term). Each query runs through both `keyword_search` and `semantic_search` (top 10 each), so permissions and parts come from the tool layer. No hits at all → `Needs review` with no model call; the D63 threshold applies to the best cosine similarity and is off until the eval sets it. B's `no_evidence_found` is accepted when all of its fixed queries ran over every part — D58's `min_searches` governs the agent methods, since B cannot search further. B is a single call: invalid output → `Error`, failed quote verification → `Needs review`, no retry.
+Method B details (T16): the "description" query is the check `title` (the `requirement` text is too long to be a useful query). Each query runs through both `keyword_search` and `semantic_search` (top 10 each), so permissions and parts come from the tool layer. No hits at all → `Needs review` with no model call; the D63 threshold applies to the best cosine similarity and is off until the eval sets it. B's `no_evidence_found` is accepted when all of its fixed queries ran over every part — D58's `min_searches` governs the agent methods, since B cannot search further. B is a single call: invalid output → `Error`, failed quote verification → `Needs review`, no retry.
 
 LC details (T17): one call per check with the whole pack (paragraph and table-row units in filename-then-reading order, read through the tools' permission query) as an identical prompt prefix for every check of the run, so it is cached (D27). Units are shown as short aliases (`u1…`) mapped back before verification. Optional scope `sustainability` sends only the sustainability parts, for real reports too large for the window. A prompt over the token limit → `Error` (`context_too_large`) with no call. LC follows method B's single-call rules; method C needs no code beyond T11/T12.
 
@@ -237,7 +237,7 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 15 | Truncate long tool results + step cap; no summarisation |
 | 16 | One worker per check, run in parallel |
 | 17 | Code verifies quotes; an LLM judge is optional later |
-| 18 | temperature 0 (E4) |
+| 18 | temperature 0 (E4) — superseded by D78: not supported by the models |
 | 19 | Cheap model for development; both models in formal eval (E5) |
 | 20 | 429 → exponential backoff, max 3 retries |
 | 21 | 401 → stop the whole run at once |
@@ -267,7 +267,7 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 45 | Max 5 checks in parallel; one run at a time |
 | 46 | OpenAI only, behind our own `LLMClient` |
 | 47 | Strict function calling + Pydantic; one retry on invalid output |
-| 48 | Seed + fingerprint; eval repeats 3 times |
+| 48 | Eval repeats 3 times and reports ranges; seed dropped by D78 |
 | 49 | PDF limits: 600 pages, per-page timeout, memory cap |
 | 50 | Quotes shown as plain text; escape on export |
 | 51 | MCP server calls the same Python functions |
@@ -296,3 +296,5 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 74 | Inconsistencies are flags for human review, not verdicts; T2 defaults to Needs review; inconsistency recall reported on the synthetic company only |
 | 75 | Units store `seq`, their reading-order position within the document (unique per document, immutable); "next unit", neighbours and section contents use it |
 | 76 | Wattlebrook (synthetic company) mirrors real ASX packs: one annual report PDF with the sustainability report as a page-range part (`parts.yaml`), plus a separate supplement PDF |
+| 77 | Keyword search matches any of the query's terms (OR of the stemmed lexemes) and ranks by `ts_rank_cd`; AND semantics (`websearch_to_tsquery`) returned nothing for 5–9-word agent queries in the first paid eval |
+| 78 | LLM client uses the OpenAI Responses API: both models reject function tools on Chat Completions with reasoning on (sol cannot turn reasoning off); no `temperature` or `seed` (rejected); `reasoning.effort` per model in `config/models.yaml`; stateless calls (`store=false`), tool results sent back as `function_call` + `function_call_output` items |
