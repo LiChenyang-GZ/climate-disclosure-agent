@@ -3,7 +3,7 @@ Check {id}: {title}
 Requirement:
 {requirement}
 
-Counts as evidence (all of these for evidence_found):
+Counts as evidence (kinds of text that count; some items are alternatives):
 {counts_as_evidence}
 
 Does not count:
@@ -14,3 +14,5 @@ Allowed reliefs (id and description; empty means none):
 
 Facts to extract (name, unit, description; empty means none):
 {facts}
+
+Compares documents: {cross_document}. Differences to look for: {inconsistency_types} (empty means none; see "Checks that compare documents").
