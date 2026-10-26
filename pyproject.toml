@@ -24,6 +24,7 @@ dependencies = [
     "langgraph>=1.2.17",
     "langgraph-checkpoint-postgres",
     "psycopg[binary]",
+    "reportlab>=5.1.0",
 ]
 
 [dependency-groups]
@@ -35,6 +36,7 @@ dev = [
     "ruff",
     "testcontainers[postgres]",
     "types-PyYAML",
+    "types-reportlab>=5.0.0.20261008",
 ]
 
 [tool.hatch.build.targets.wheel]

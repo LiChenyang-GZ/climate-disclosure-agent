@@ -1,0 +1,11 @@
+documents:
+- filename: wattlebrook-annual-report-2026.pdf
+  kind: annual
+  parts:
+  - kind: sustainability
+    first_pdf_page: 18
+    last_pdf_page: 31
+    label: Climate-related financial disclosures
+- filename: wattlebrook-climate-data-supplement-2026.pdf
+  kind: other
+  parts: []
