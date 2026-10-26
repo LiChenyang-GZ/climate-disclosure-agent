@@ -2,7 +2,7 @@
 
 This is the source of truth for **how** the system is built. `01-requirements.md` says what it does; `03-tasks.md` says in what order it is built. If code and this file disagree, raise it in the PR — do not silently pick one.
 
-Decisions are numbered **D1–D78**. Task specs cite them by number (e.g. "follow D35, D58").
+Decisions are numbered **D1–D79**. Task specs cite them by number (e.g. "follow D35, D58").
 
 ## 1. Tech stack
 
@@ -159,7 +159,7 @@ build_prompt → call_model → (tool call?) ─yes→ run_tool → update_state
 ```
 
 - **State** (D59): `queries_done`, `documents_covered`, `candidate_units`, `open_aspects`, `step`, `tokens`. The short state summary goes into every prompt; old tool results may be truncated.
-- **Guards**: step cap 12, token cap 60k per check (D15, D22); repeated identical normalised query is rejected with a `bad_args` envelope; budget pre-deducted before each model call — if the run budget would be exceeded, stop and mark remaining checks `Not checked`.
+- **Guards**: step cap 12, token cap 150k per check (D15, D22, raised by D79); repeated identical normalised query is rejected with a `bad_args` envelope; budget pre-deducted before each model call — if the run budget would be exceeded, stop and mark remaining checks `Not checked`.
 - **`submit_finding`** args (Pydantic, strict schema, D12, D47): `status`, `rationale`, `missing_aspects[]`, `relief_applied: bool`, `evidence[] {unit_id, quote, role}`, `facts[] {name, value, unit, scope, year, unit_id}`. Invalid JSON → one retry with the validation error, then `Error`.
 - **Verification** (D17 option A, T10): each quote must appear verbatim in the cited unit after whitespace normalisation; a quote may span the cited unit and the next unit (page breaks); the unit must belong to the run's pack and be visible to the user.
 - **"No evidence found" rule** (D58): accepted only if `len(distinct normalised queries) ≥ min_searches` (default 4, per check in `checks.yaml`) **and** every non-deleted document in the pack was covered — counted per part where a document has parts (D69). Otherwise status becomes `Needs review` with reason `insufficient search`.
@@ -298,3 +298,4 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 76 | Wattlebrook (synthetic company) mirrors real ASX packs: one annual report PDF with the sustainability report as a page-range part (`parts.yaml`), plus a separate supplement PDF |
 | 77 | Keyword search matches any of the query's terms (OR of the stemmed lexemes) and ranks by `ts_rank_cd`; AND semantics (`websearch_to_tsquery`) returned nothing for 5–9-word agent queries in the first paid eval |
 | 78 | LLM client uses the OpenAI Responses API: both models reject function tools on Chat Completions with reasoning on (sol cannot turn reasoning off); no `temperature` or `seed` (rejected); `reasoning.effort` per model in `config/models.yaml`; stateless calls (`store=false`), tool results sent back as `function_call` + `function_call_output` items |
+| 79 | Token cap per check raised from 60k to 150k: the cap counts every token sent across a check's calls (each step resends the history), and in the second paid luna run 80–87 % of agent checks stopped at 60k (mean 66.6k, about 9 steps) once keyword search returned hits; most of those tokens are cached input |
