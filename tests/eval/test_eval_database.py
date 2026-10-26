@@ -250,3 +250,17 @@ async def test_agent_tool_event(env):
     assert len(events) == 1
     assert events[0].payload["query"] == "climate risk"
     assert len(events[0].payload["part_ids"]) == 3
+
+
+async def test_reuse_is_per_embedder(env):
+    # Regression: a pack indexed with one embedder must never be reused for another.
+    engine = env[0]
+
+    class OtherEmbedder(HashEmbedder):
+        pass
+
+    first = await ingest_pack(engine, PACK, embedder=HashEmbedder())
+    again = await ingest_pack(engine, PACK, embedder=HashEmbedder())
+    other = await ingest_pack(engine, PACK, embedder=OtherEmbedder())
+    assert first == again
+    assert other != first

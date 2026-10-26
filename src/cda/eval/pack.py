@@ -20,10 +20,14 @@ async def ingest_pack(
     engine: AsyncEngine,
     folder: str | Path,
     *,
-    team_handle: str = "evaluation",
+    team_handle: str | None = None,
     user_handle: str = "eval",
     embedder: Embedder,
 ) -> UUID:
+    # A reused pack keeps the vectors of the embedder that indexed it, so packs are only
+    # reused within one embedder: hash vectors searched with bge queries are meaningless.
+    if team_handle is None:
+        team_handle = f"evaluation-{type(embedder).__name__.lower()}"
     folder = Path(folder)
     key = load_answer_key(folder / "answer_key.yaml")
     parts = load_parts_file(folder / "parts.yaml")
