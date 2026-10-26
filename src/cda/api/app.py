@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from cda import __version__
 from cda.api.errors import install_errors
+from cda.api.service import IndexState
 from cda.config import Settings
 from cda.indexing.embed import BgeEmbedder, Embedder
 
@@ -34,9 +35,10 @@ def create_app(
     app.state.settings = configured
     app.state.engine = engine
     app.state.embedder = embeddings
-    app.state.indexing = set()
-    app.state.index_errors = {}
-    app.state.document_states = {}
+    app.state.index_state = IndexState()
+    app.state.indexing = app.state.index_state.indexing
+    app.state.index_errors = app.state.index_state.index_errors
+    app.state.document_states = app.state.index_state.document_states
     install_errors(app)
     from cda.api.routes import findings, packs, runs
 
