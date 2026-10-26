@@ -24,9 +24,10 @@ def markdown(table: TableData) -> str:
     )
 
 
-def detect_tables(page: pymupdf.Page) -> list[Block]:
+def detect_tables(page: pymupdf.Page, clip: pymupdf.Rect | None = None) -> list[Block]:
     result = []
-    for table in page.find_tables().tables:  # type: ignore[no-untyped-call]
+    finder = page.find_tables() if clip is None else page.find_tables(clip=clip)  # type: ignore[no-untyped-call]
+    for table in finder.tables:
         if table.row_count < 2 or table.col_count < 2:
             continue
         cells = [[normalize_text(cell or "") for cell in row] for row in table.extract()]

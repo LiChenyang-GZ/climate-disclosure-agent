@@ -94,9 +94,13 @@ def parse_pdf(
             start = clock()
             page = doc.load_page(index)  # type: ignore[no-untyped-call]
             blocks = extract_blocks(page.get_text("dict"))
-            tables = detect_tables(page)
-            blocks = [b for b in blocks if not any(covered(b, t) for t in tables)] + tables
-            areas.append(page_areas(blocks, page.rect.width, page.rect.height))
+            groups = []
+            for half, x0, x1, text_blocks in page_areas(blocks, page.rect.width, page.rect.height):
+                clip = pymupdf.Rect(x0, 0, x1, page.rect.height) if half is not None else None  # type: ignore[no-untyped-call]
+                tables = detect_tables(page, clip)
+                kept = [b for b in text_blocks if not any(covered(b, t) for t in tables)]
+                groups.append((half, x0, x1, kept + tables))
+            areas.append(groups)
             heights.append(page.rect.height)
             if clock() - start > page_timeout_s:
                 raise ParseError("page_timeout", index + 1)
@@ -127,6 +131,6 @@ def parse_pdf(
         return ParsedDocument(
             hashlib.sha256(content).hexdigest(),
             doc.page_count,
-            f"cda-parse-2/pymupdf-{pymupdf.VersionBind}",
+            f"cda-parse-3/pymupdf-{pymupdf.VersionBind}",
             build_units(pages),
         )

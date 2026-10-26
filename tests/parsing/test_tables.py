@@ -22,8 +22,8 @@ ROW_TEXTS = [
 ]
 
 
-def draw_table(page, data, x=40, y=200):
-    width, height = 100, 30
+def draw_table(page, data, x=40, y=200, width=100):
+    height = 30
     for r in range(len(data) + 1):
         page.draw_line((x, y + r * height), (x + len(data[0]) * width, y + r * height))
     for c in range(len(data[0]) + 1):
@@ -61,7 +61,7 @@ def test_exact_table_and_rows(tmp_path):
     assert table.text == MARKDOWN
     assert table.token_count == count_tokens(MARKDOWN)
     assert [u.text for u in result.units if u.kind == "table_row"] == ROW_TEXTS
-    assert result.parser_version.startswith("cda-parse-2/")
+    assert result.parser_version.startswith("cda-parse-3/")
 
 
 def test_covered_text_and_order(tmp_path):
@@ -134,6 +134,56 @@ def test_spread_table(tmp_path):
     units = parse_pdf(make_pdf(tmp_path, spread=True)).units
     assert len([u for u in units if u.kind == "table"]) == 1
     assert all(u.page_half == "right" and u.printed_page == "24" for u in units)
+
+
+def test_continuous_grid_spread(tmp_path):
+    path = tmp_path / "continuous.pdf"
+    with pymupdf.open() as doc:
+        page = doc.new_page(width=1000, height=707)
+        # Continuous rules cross an empty text gutter. Stagger the two halves'
+        # baselines so PyMuPDF keeps their text in separate blocks.
+        for y in (200, 260, 320):
+            page.draw_line((50, y), (950, y))
+        for x in (50, 250, 500, 750, 950):
+            page.draw_line((x, 200), (x, 320))
+        for offset, label in ((0, "Left"), (500, "Right")):
+            for row, cells in enumerate(
+                ((label + " metric", label + " value"), (label + " scope", "120"))
+            ):
+                for col, cell in enumerate(cells):
+                    page.insert_text(
+                        (60 + offset + col * 200, 220 + row * 60 + (25 if offset else 0)),
+                        cell,
+                        fontsize=10,
+                    )
+            page.insert_text((30 + offset, 690), "100" if offset == 0 else "101", fontsize=10)
+        assert len(page.find_tables().tables) == 1
+        doc.save(path)
+    units = parse_pdf(path).units
+    tables = [u for u in units if u.kind == "table"]
+    assert [u.page_half for u in tables] == ["left", "right"]
+    for table in tables:
+        own, other = ("Left", "Right") if table.page_half == "left" else ("Right", "Left")
+        assert own + " scope" in table.text and other not in table.text
+    assert [u.page_half for u in units] == sorted(
+        [u.page_half for u in units], key=lambda half: half == "right"
+    )
+    assert all(u.printed_page == ("100" if u.page_half == "left" else "101") for u in units)
+    assert all(u.kind != "paragraph" or u.text in {"100", "101"} for u in units)
+
+
+def test_landscape_table_text_over_middle(tmp_path):
+    path = tmp_path / "single.pdf"
+    data = [["Metric", "Value", "Middle header", "Unit"], ["Scope", "120", "Middle body", "tCO2e"]]
+    with pymupdf.open() as doc:
+        page = doc.new_page(width=1000, height=707)
+        draw_table(page, data, x=30, width=220)
+        doc.save(path)
+    units = parse_pdf(path).units
+    assert all(u.page_half is None for u in units)
+    tables = [u for u in units if u.kind == "table"]
+    assert len(tables) == 1
+    assert all(cell in tables[0].text for row in data for cell in row)
 
 
 def test_separate_pages(tmp_path):
