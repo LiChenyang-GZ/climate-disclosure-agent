@@ -1,0 +1,27 @@
+pack: data/synthetic/wattlebrook
+key_version: 1
+embedder: hash
+tolerance: 0.02
+metrics:
+  keyword:
+    hit_at_1: 0.07142857142857142
+    hit_at_5: 0.14285714285714285
+    hit_at_10: 0.14285714285714285
+    hit_at_20: 0.14285714285714285
+    mrr: 0.10714285714285714
+  vector:
+    hit_at_1: 0.5
+    hit_at_5: 0.7142857142857143
+    hit_at_10: 0.7857142857142857
+    hit_at_20: 0.9285714285714286
+    mrr: 0.5918890633176348
+  hybrid:
+    hit_at_1: 0.5
+    hit_at_5: 0.7857142857142857
+    hit_at_10: 0.8571428571428571
+    hit_at_20: 0.9285714285714286
+    mrr: 0.604251700680272
+last_paid_eval:
+  prompt_sha256: null
+  date: null
+  results: null
