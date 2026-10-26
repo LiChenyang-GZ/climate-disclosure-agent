@@ -188,6 +188,8 @@ build_prompt → call_model → (tool call?) ─yes→ run_tool → update_state
 
 No reranker in phase 1 (D9, experiment E3).
 
+Method B details (T16): the "description" query is the check `title` (the `requirement` text is too long for `websearch_to_tsquery`, which ANDs every term). Each query runs through both `keyword_search` and `semantic_search` (top 10 each), so permissions and parts come from the tool layer. No hits at all → `Needs review` with no model call; the D63 threshold applies to the best cosine similarity and is off until the eval sets it. B's `no_evidence_found` is accepted when all of its fixed queries ran over every part — D58's `min_searches` governs the agent methods, since B cannot search further. B is a single call: invalid output → `Error`, failed quote verification → `Needs review`, no retry.
+
 ## 11. API (T20)
 `X-Demo-User: sarah|alex` header selects the user (no real auth). Routes: `POST/GET /packs`, `POST /packs/{id}/documents` (upload), `POST /packs/{id}/parse`, `POST /runs` (needs `Idempotency-Key`), `GET /runs/{id}`, `GET /runs/{id}/events` (SSE), `POST /runs/{id}/cancel`, `GET /runs/{id}/findings`, `GET /findings/{id}`, `POST /findings/{id}/reviews` (lead only; `version` for optimistic lock; note required), `GET /runs/{id}/export?format=md|json|csv`. Quotes are returned as plain text; Markdown export escapes special characters (D50).
 
