@@ -13,10 +13,11 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from cda.agent.budget import Budget
 from cda.agent.finding import SubmitFinding
+from cda.agent.hooks import EventSink, noop_sink
 from cda.agent.nosevidence import accept
 from cda.agent.prompts import render
 from cda.agent.state import WorkerResult, WorkerState
-from cda.checks.models import Check, CheckSet
+from cda.checks.models import Check, CheckSet, normalise_query
 from cda.indexing.embed import Embedder
 from cda.llm.calls import record_call
 from cda.llm.client import LLMClient, parse_tool_call
@@ -49,6 +50,7 @@ class WorkerDeps:
     method: Literal["A", "B", "C", "LC"]
     embedder: Embedder | None
     budget: Budget
+    emit: EventSink = noop_sink
     lc_pack: Any = None
     step_cap: int = 12
     token_cap: int = 60_000
@@ -220,7 +222,31 @@ def build_graph(
                 instruction="call the tool again with a JSON object.",
             )
             return state
+        previous_queries = set(s.context.coverage.queries)
         s.tool_result = await run_tool(s.context, s.call.name, args)
+        data = s.tool_result.data or {}
+        query = args.get("query")
+        scope = set()
+        if s.call.name in ("keyword_search", "semantic_search") and isinstance(query, str):
+            scope = {
+                p
+                for tool, q, parts in s.context.coverage.queries - previous_queries
+                if tool == s.call.name and q == normalise_query(query)
+                for p in parts
+            }
+        await deps.emit(
+            deps.run_id,
+            check.id,
+            "tool_called",
+            {
+                "tool": s.call.name,
+                "query": normalise_query(query) if isinstance(query, str) else None,
+                "part_ids": sorted(scope),
+                "category": s.tool_result.category,
+                "hits": len(data.get("hits", [])),
+                "repeated": "repeated query" in s.tool_result.model_dump_json(),
+            },
+        )
         s.route = "update_state"
         return state
 

@@ -277,7 +277,7 @@ def _answer_key(manifest: PackManifest) -> AnswerKey:
     cell("M1", "inconsistent", "split", ["m1_sr", "m1_relief", "scope_ar"], "scope3_first_year")
     cells[-1].evidence += [
         evidence(f"emissions_table_row{i}", "table", q)
-        for i, q in enumerate(["Scope 1", "Scope 2 location-based", "Scope 2 market-based"])
+        for i, q in enumerate(["Scope 1 gross", "Scope 2 location-based", "Scope 2 market-based"])
     ]
     cell("M2", "found", "split", ["m2_capital", "m2_price", "scorecard_row0", "asset_table_row0"])
     # The mandated carbon-price sentence deliberately uses the check's wording.
@@ -298,7 +298,7 @@ def _answer_key(manifest: PackManifest) -> AnswerKey:
             locations=[
                 evidence("scope_ar"),
                 evidence("m1_sr"),
-                evidence("emissions_table_row0", "table", "Scope 1"),
+                evidence("emissions_table_row0", "table", "Scope 1 gross"),
             ],
         ),
         Issue(

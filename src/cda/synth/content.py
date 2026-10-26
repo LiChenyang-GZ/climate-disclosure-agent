@@ -498,7 +498,7 @@ def supplement_pages() -> list[Page]:
                     "emissions_table",
                     ["Measure", "FY2026", "FY2025"],
                     [
-                        ["Scope 1", "1,842,600", "1,955,100"],
+                        ["Scope 1 gross", "1,842,600", "1,955,100"],
                         ["Scope 2 location-based", "38,450", "40,120"],
                         ["Scope 2 market-based", "21,900", "23,300"],
                     ],

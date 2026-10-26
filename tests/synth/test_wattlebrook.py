@@ -404,3 +404,14 @@ def test_near_miss_paragraphs(pack, section):
         )
         sentences = re.split(r"(?<=[.!?])\s+", normalize_text(loc.quote))
         assert all(not any(q in s or s in q for q in evidence) for s in sentences)
+
+
+def test_quotes_meet_verifier_minimum(pack):
+    # T10's verifier rejects quotes shorter than 8 characters as too_short.
+    folder, _, _ = pack
+    key = AnswerKey.model_validate(
+        yaml.safe_load((folder / "answer_key.yaml").read_text(encoding="utf-8"))
+    )
+    quotes = [e.quote for c in key.cells for e in c.evidence]
+    quotes += [e.quote for i in key.planted_issues for e in i.locations]
+    assert all(len(normalize_text(q)) >= 8 for q in quotes)

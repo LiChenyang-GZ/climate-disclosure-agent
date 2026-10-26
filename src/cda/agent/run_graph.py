@@ -200,6 +200,7 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                         method=cast(Literal["A", "B", "C", "LC"], r.method),
                         embedder=deps.embedder,
                         budget=budget,
+                        emit=deps.emit,
                         step_cap=deps.step_cap,
                         token_cap=deps.token_cap,
                         max_output_tokens=deps.max_output_tokens,
