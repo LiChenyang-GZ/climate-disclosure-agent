@@ -24,6 +24,8 @@ from cda.runner.claim import claim_next
 from cda.runner.deps import build_run_deps
 from cda.runner.events import EventSink
 from cda.runner.lease import hold_lease, release_lease
+from cda.tracing.export import export_run, make_trace_client
+from cda.tracing.settings import TracingSettings
 
 logger = logging.getLogger(__name__)
 DepsFactory = Callable[[Settings, BaseCheckpointSaver[Any]], RunDeps]
@@ -60,6 +62,14 @@ async def serve(
             try:
                 status = await run_fn(engine, run_id, deps=deps)
                 logger.info("finished %s %s", run_id, status)
+                try:
+                    tracing = TracingSettings()
+                    if tracing.enabled:
+                        client = make_trace_client(tracing)
+                        await export_run(engine, run_id, client)
+                        await asyncio.to_thread(client.flush)
+                except Exception as exc:  # noqa: BLE001 - optional tracing must never fail a run
+                    logger.error("trace export failed %s", type(exc).__name__)
             except Exception as exc:  # noqa: BLE001 - retain worker safety with safe type-only logs
                 logger.error("run failed %s", type(exc).__name__)
 
