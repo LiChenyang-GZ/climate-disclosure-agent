@@ -5,7 +5,8 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from sqlalchemy import func, literal_column
+from sqlalchemy import Text, cast, func, literal_column
+from sqlalchemy.dialects.postgresql import TSQUERY
 
 from cda.db.models import Unit
 from cda.tools.context import ToolContext
@@ -86,7 +87,9 @@ async def keyword_search(ctx: ToolContext, args: SearchArgs) -> ToolResult:
     scope = await search_scope(ctx, args, "keyword_search")
     if isinstance(scope, ToolResult):
         return scope
-    query = func.websearch_to_tsquery(literal_column("'english'"), args.query)
+    # PostgreSQL stems and quotes the bound input before we OR its lexemes.
+    plain = func.plainto_tsquery(literal_column("'english'"), args.query)
+    query = cast(func.replace(cast(plain, Text), "&", "|"), TSQUERY)
     rank = func.ts_rank_cd(Unit.tsv, query).label("rank")
     stmt = (
         unit_query(ctx)
