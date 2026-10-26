@@ -226,6 +226,7 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                     await conn.execute(select(Pack.created_by).where(Pack.id == pid))
                 ).scalar_one()
             if args.retrieval_only:
+                results["retrieval_only"] = True
                 async with engine.begin() as conn:
                     results["retrieval"] = await evaluate_retrieval(
                         ToolContext(conn, uid, pid, embedder), key

@@ -39,3 +39,6 @@ jobs:
         env:
           CDA_REQUIRE_DOCKER: "1"
         run: uv run pytest -q
+      - name: Retrieval gate (synthetic company, no model calls)
+        if: hashFiles('pyproject.toml') != ''
+        run: uv run python -m cda.eval.ci_gate --summary "$GITHUB_STEP_SUMMARY"
