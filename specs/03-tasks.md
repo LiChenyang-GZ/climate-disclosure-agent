@@ -32,6 +32,7 @@ Implementation is split into small tasks. Each task is one module plus its tests
 | T19 | CI: ruff, mypy, pytest, retrieval eval on the synthetic company (no LLM calls) | T18 | sol | normal | codex | 6 |
 | T24 | Keyword search matches any query term (OR) and ranks with `ts_rank_cd` (D77); found in the first paid eval | T08, T19 | sol | strict | codex | 6.5 |
 | T25 | LLM client on the OpenAI Responses API; no temperature/seed; reasoning effort per model (D78) | T07 | sol | normal | codex | 6.5 |
+| T26 | Spreads: decide halves from text only and detect tables per half, so a table across a CBA spread no longer blocks the split (D70); found in T23 | T04, T05 | sol | normal | codex | 7 |
 | T20 | REST API: packs, upload, parse, runs, findings, review (optimistic lock), export; demo-user header; idempotency key | T12, T14 | sol | normal | codex | 7 |
 | T21 | Langfuse tracing | T11 | sol | normal | codex | 7 |
 | T22 | MCP server (Python, stdio): read-only tools + `start_check`, same permission functions | T08, T20 | sol | normal | codex | 7 |
@@ -66,6 +67,7 @@ Section numbers refer to `02-design.md`; D-numbers to its decision digest (§15)
 | T19 | GitHub Actions | §13 | D56, D72 |
 | T24 | Postgres `plainto_tsquery` / `tsquery` | §1, §6 | D35, D77 |
 | T25 | openai (Responses API) | §1, §7 | D46, D66, D78 |
+| T26 | pymupdf | §5 | D33, D52, D70 |
 | T20 | fastapi, sse-starlette | §11 | D24, D44, D50 |
 | T21 | langfuse | §1 | D25 |
 | T22 | mcp (Python SDK, stdio) | §12 | D13, D51 |
