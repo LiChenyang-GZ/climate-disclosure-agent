@@ -53,6 +53,12 @@ def render_report(results: dict[str, Any]) -> str:
         and {"A", "C"} & set(results.get("methods", {}))
     ):
         lines.append(f"- {label('step_cap')}: {results['step_cap']}")
+    if (
+        not retrieval_only
+        and "token_cap" in results
+        and {"A", "C"} & set(results.get("methods", {}))
+    ):
+        lines.append(f"- {label('token_cap')}: {results['token_cap']}")
     if not retrieval_only:
         methods = results.get("methods", {})
         lines += [

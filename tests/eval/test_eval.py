@@ -362,3 +362,30 @@ def test_report_step_cap_line():
     assert "step cap" not in render_report(results)  # fixture has only LC
     results["methods"]["A"] = results["methods"]["LC"]
     assert "- step cap: 20" in render_report(results)
+
+
+def test_token_cap_argument(monkeypatch, tmp_path):
+    from cda.eval import run_eval
+
+    p = run_eval.parser()
+    base = ["--pack", str(PACK), "--out", str(tmp_path)]
+    assert p.parse_args(base).token_cap == 150_000
+    assert p.parse_args([*base, "--token-cap", "300000"]).token_cap == 300_000
+
+    def fail(*args, **kwargs):
+        raise AssertionError("must not reach database or model")
+
+    monkeypatch.setattr(run_eval, "make_engine", fail)
+    with pytest.raises(SystemExit) as exc:
+        run_eval.main([*base, "--token-cap", "0"])
+    assert exc.value.code != 0
+
+
+def test_report_token_cap_line():
+    from cda.eval.report import render_report
+
+    results = report_fixture()
+    results["token_cap"] = 300_000
+    assert "token cap" not in render_report(results)  # fixture has only LC
+    results["methods"]["C"] = results["methods"]["LC"]
+    assert "- token cap: 300000" in render_report(results)
