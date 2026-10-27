@@ -90,6 +90,7 @@ async def run_single_call(
     try:
         parsed = parse_tool_call(call, tools)
         assert isinstance(parsed, SubmitFinding)
+        parsed.drop_uncited_facts()
         parsed.check_rules(check)
     except (ToolArgsError, ValueError) as exc:
         state.error_detail = f"submit_finding rejected: {exc}"[:1000]

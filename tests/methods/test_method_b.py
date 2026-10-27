@@ -152,6 +152,21 @@ async def test_verification(harness, quote, uid, reason):
     assert len(llm.requests) == 1
 
 
+async def test_uncited_fact_dropped(harness):
+    fact = {
+        "name": "anything",
+        "value": 1,
+        "unit": None,
+        "scope": None,
+        "year": None,
+        "unit_id": str(uuid4()),
+        "raw": "1",
+    }
+    d, llm, c, cs = harness([turn(facts=[fact])])
+    r = await run_method_b(d, c, cs)
+    assert (r.status, r.facts, len(llm.requests)) == ("evidence_found", [], 1)
+
+
 @pytest.mark.parametrize(
     "response,detail",
     [
