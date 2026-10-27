@@ -6,6 +6,8 @@ from cda.eval.metrics import summarize
 
 COLUMNS = (
     "status_accuracy",
+    "abstain_rate",
+    "answered_status_accuracy",
     "evidence_recall",
     "item_recall",
     "citation_accuracy",
@@ -59,6 +61,12 @@ def render_report(results: dict[str, Any]) -> str:
         and {"A", "C"} & set(results.get("methods", {}))
     ):
         lines.append(f"- {label('token_cap')}: {results['token_cap']}")
+    runs = [r for rs in results.get("methods", {}).values() for r in rs]
+    if not retrieval_only and runs and "always_found_baseline" in runs[0]:
+        # Depends only on the answer key: what answering "found" everywhere would score.
+        lines.append(
+            f"- {label('always_found_baseline')} (status): {runs[0]['always_found_baseline']:.3f}"
+        )
     if not retrieval_only:
         methods = results.get("methods", {})
         lines += [

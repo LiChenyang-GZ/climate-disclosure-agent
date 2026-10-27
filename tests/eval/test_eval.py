@@ -389,3 +389,33 @@ def test_report_token_cap_line():
     assert "token cap" not in render_report(results)  # fixture has only LC
     results["methods"]["C"] = results["methods"]["LC"]
     assert "- token cap: 300000" in render_report(results)
+
+
+def test_abstain_answered_and_baseline():
+    key = load_answer_key(PACK / "answer_key.yaml")
+    found = [c for c in key.cells if c.status == "found"]
+    findings = [
+        Finding("G1", "evidence_found"),  # answered, agrees
+        Finding("M1", "needs_review", "possible_inconsistency"),  # a flag is an answer
+        Finding("S3", "evidence_found"),  # answered, disagrees (key: partial)
+        Finding("S1", "needs_review", "cap_hit"),  # abstains
+        Finding("S2", "error", "invalid_output"),  # abstains
+    ]  # every other cell has no finding: abstains
+    r = score_run(key, findings)
+    n = len(key.cells)
+    assert r["status_accuracy"] == pytest.approx(2 / n)
+    assert r["abstain_rate"] == pytest.approx((n - 3) / n)
+    assert r["answered_status_accuracy"] == pytest.approx(2 / 3)
+    assert r["always_found_baseline"] == pytest.approx(len(found) / n)
+
+
+def test_answered_accuracy_when_nothing_answered():
+    key = load_answer_key(PACK / "answer_key.yaml")
+    r = score_run(key, [])
+    assert (r["abstain_rate"], r["answered_status_accuracy"]) == (1.0, 0.0)
+
+
+def test_report_baseline_line():
+    from cda.eval.report import render_report
+
+    assert "always found baseline (status): " in render_report(report_fixture())
