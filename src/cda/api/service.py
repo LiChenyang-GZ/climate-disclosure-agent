@@ -7,6 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 from sqlalchemy import func, insert, select, text
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql import Select
@@ -168,6 +169,17 @@ async def document_info(
             )
         )
     ).scalar_one()
+    units = (
+        await conn.execute(
+            visible(
+                select(func.count())
+                .select_from(Unit)
+                .join(Document, Document.id == Unit.document_id)
+                .join(Pack, Pack.id == Document.pack_id),
+                actor["id"],
+            ).where(Document.id == did, Unit.kind.in_(["paragraph", "table_row"]))
+        )
+    ).scalar_one()
     state = index_state.document_states.get(did)
     if row["pack_id"] in index_state.indexing:
         status = "indexing"
@@ -177,10 +189,47 @@ async def document_info(
         status = "done"
     else:
         status = "pending"
-    return {**row, "parts": [dict(p) for p in parts], "index_status": status}
+    return {
+        **row,
+        "parts": [dict(p) for p in parts],
+        "index_status": status,
+        "unit_count": units,
+    }
 
 
-async def list_packs(conn: AsyncConnection, actor: dict[str, Any]) -> list[dict[str, Any]]:
+def pack_status(index_statuses: list[str]) -> str:
+    """Pack status shown in the UI, derived from its documents' index states."""
+    if not index_statuses:
+        return "empty"
+    if "indexing" in index_statuses:
+        return "parsing"
+    if all(s == "done" for s in index_statuses):
+        return "parsed"
+    if all(s in ("done", "failed") for s in index_statuses):
+        return "parse_failed" if "done" not in index_statuses else "parsed_with_issues"
+    return "uploaded"
+
+
+async def pack_documents(
+    index_state: IndexState, conn: AsyncConnection, actor: dict[str, Any], pid: UUID
+) -> list[dict[str, Any]]:
+    docs = (
+        (
+            await conn.execute(
+                visible(select(Document).join(Pack, Pack.id == Document.pack_id), actor["id"])
+                .where(Document.pack_id == pid, Document.deleted_at.is_(None))
+                .order_by(Document.filename, Document.id)
+            )
+        )
+        .mappings()
+        .all()
+    )
+    return [await document_info(index_state, conn, dict(d), actor) for d in docs]
+
+
+async def list_packs(
+    conn: AsyncConnection, actor: dict[str, Any], index_state: IndexState | None = None
+) -> list[dict[str, Any]]:
     count = (
         select(func.count())
         .select_from(Document)
@@ -204,7 +253,7 @@ async def list_packs(conn: AsyncConnection, actor: dict[str, Any]) -> list[dict[
     )
     latest = (
         select(Run.id, Run.pack_id, Run.status, Run.created_at)
-        .distinct(Run.pack_id)
+        .ext(distinct_on(Run.pack_id))
         .where(Run.pack_id.in_([r["id"] for r in rows]))
         .order_by(Run.pack_id, Run.created_at.desc(), Run.id.desc())
         .subquery()
@@ -228,12 +277,20 @@ async def list_packs(conn: AsyncConnection, actor: dict[str, Any]) -> list[dict[
                 "created_at": run["created_at"],
                 "counts": counts.get(run["id"], {}),
             }
-        result.append({**r, "latest_run": summary})
+        row = {**r, "latest_run": summary}
+        if index_state is not None:
+            docs = await pack_documents(index_state, conn, actor, r["id"])
+            row["status"] = pack_status([d["index_status"] for d in docs])
+        result.append(row)
     return result
 
 
-async def list_teams(conn: AsyncConnection, actor: dict[str, Any]) -> list[dict[str, Any]]:
+async def list_teams(
+    conn: AsyncConnection, actor: dict[str, Any], team_id: UUID | None = None
+) -> list[dict[str, Any]]:
     mine = select(TeamMember.team_id).where(TeamMember.user_id == actor["id"])
+    if team_id is not None:
+        mine = mine.where(TeamMember.team_id == team_id)
     rows = (
         await conn.execute(
             select(Team.id, Team.name, User.handle, User.display_name)

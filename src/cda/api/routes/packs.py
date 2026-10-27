@@ -25,6 +25,9 @@ from cda.parsing.store import ingest_pdf
 
 router = APIRouter()
 
+MAX_DOCUMENTS = 20
+ACTIVE_RUN = ("queued", "running")
+
 
 class PackInput(BaseModel):
     company: str = Field(min_length=1, max_length=500)
@@ -105,24 +108,25 @@ async def create_pack(body: PackInput, conn: Conn, actor: Actor) -> dict[str, An
 
 
 @router.get("/packs")
-async def list_packs(conn: Conn, actor: Actor) -> list[dict[str, Any]]:
-    return await service.list_packs(conn, actor)
+async def list_packs(request: Request, conn: Conn, actor: Actor) -> list[dict[str, Any]]:
+    return await service.list_packs(conn, actor, request.app.state.index_state)
+
+
+async def active_run(conn: Conn, actor: Actor, pid: UUID) -> UUID | None:
+    return (
+        await conn.execute(
+            deps.visible(select(Run.id).join(Pack, Pack.id == Run.pack_id), actor["id"])
+            .where(Run.pack_id == pid, Run.status.in_(ACTIVE_RUN))
+            .order_by(Run.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
 
 
 @router.get("/packs/{pid}")
 async def get_pack(pid: UUID, request: Request, conn: Conn, actor: Actor) -> dict[str, Any]:
     row = await deps.visible_pack(conn, actor, pid)
-    docs = (
-        (
-            await conn.execute(
-                deps.visible(select(Document).join(Pack, Pack.id == Document.pack_id), actor["id"])
-                .where(Document.pack_id == pid, Document.deleted_at.is_(None))
-                .order_by(Document.filename, Document.id)
-            )
-        )
-        .mappings()
-        .all()
-    )
+    documents = await service.pack_documents(request.app.state.index_state, conn, actor, pid)
     runs = (
         (
             await conn.execute(
@@ -137,8 +141,15 @@ async def get_pack(pid: UUID, request: Request, conn: Conn, actor: Actor) -> dic
     )
     return {
         **row,
-        "documents": [await document_info(request, conn, dict(d), actor) for d in docs],
+        "documents": documents,
         "latest_runs": [run_errors(dict(r)) for r in runs],
+        "status": service.pack_status([d["index_status"] for d in documents]),
+        "team": (await service.list_teams(conn, actor, row["team_id"]))[0],
+        "limits": {
+            "max_upload_mb": request.app.state.settings.cda_max_upload_mb,
+            "max_documents": MAX_DOCUMENTS,
+        },
+        "active_run_id": await active_run(conn, actor, pid),
     }
 
 
@@ -180,6 +191,17 @@ async def upload_document(
     ).first()
     if duplicate:
         raise APIError(409, "duplicate_document", "Document already exists in pack")
+    if pid in request.app.state.indexing:
+        raise APIError(409, "pack_parsing", "Wait for parsing to finish before uploading")
+    held = (
+        await conn.execute(
+            select(func.count())
+            .select_from(Document)
+            .where(Document.pack_id == pid, Document.deleted_at.is_(None))
+        )
+    ).scalar_one()
+    if held >= MAX_DOCUMENTS:
+        raise APIError(409, "pack_full", f"A pack can hold up to {MAX_DOCUMENTS} files")
     path = document_path(request.app.state.settings.cda_upload_dir, pid, digest)
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
@@ -218,6 +240,8 @@ async def set_parts(
 async def delete_document(pid: UUID, did: UUID, conn: Conn, actor: Actor) -> dict[str, str]:
     await document(conn, actor, pid, did)
     lead(actor)
+    if await active_run(conn, actor, pid) is not None:
+        raise APIError(409, "run_active", "A check is running on this pack")
     await conn.execute(
         update(Document).where(Document.id == did).values(deleted_at=datetime.now(UTC))
     )

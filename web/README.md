@@ -17,3 +17,9 @@ npm run typecheck
 npx playwright install chromium   # once
 npx playwright test               # builds, starts on :3100, API mocked in the browser (D81)
 ```
+
+Smoke test against the real API (local only; creates a uniquely named Wattlebrook pack): start the API and `npx next start -p 3101` with `CDA_API_URL` set, then
+
+```
+SMOKE_URL=http://127.0.0.1:3101 npx playwright test -c playwright.smoke.config.ts
+```

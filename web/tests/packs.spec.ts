@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
 
-import { TEAMS, mockApi, pack, type Handler } from "./mock-api";
+import { TEAMS, mockApi, pack, packDetail, type Handler } from "./mock-api";
 
 test.describe("Packs page (PRD 6.2, 9.1 #1)", () => {
   test("empty state for sarah offers New pack", async ({ page }) => {
@@ -108,13 +108,7 @@ test.describe("Packs page (PRD 6.2, 9.1 #1)", () => {
       "GET /packs/p2": (user) =>
         user === "alex"
           ? { status: 404, json: { error: "not_found", message: "Resource not found" } }
-          : {
-              json: {
-                ...pack({ id: "p2", company: "Harbour Bank" }),
-                documents: [],
-                latest_runs: [],
-              },
-            },
+          : { json: packDetail({ id: "p2", company: "Harbour Bank" }) },
     });
     await page.goto("/packs/p2");
     await expect(page.getByRole("heading", { name: "Harbour Bank" })).toBeVisible();
@@ -171,7 +165,7 @@ test.describe("New pack dialog (PRD 6.2)", () => {
         return { status: 201, json: { id: "new-pack" } };
       },
       "GET /packs/new-pack": () => ({
-        json: { ...pack({ id: "new-pack" }), documents: [], latest_runs: [] },
+        json: packDetail({ id: "new-pack", status: "empty", documents: [] }),
       }),
     });
     await dialog.getByLabel("Company").fill("  Wattlebrook Energy ");

@@ -1,4 +1,11 @@
-import type { FindingStatus, PackRow, RunStatus } from "./api";
+import type {
+  DocumentKind,
+  FindingStatus,
+  IndexStatus,
+  PackRow,
+  PackStatus,
+  RunStatus,
+} from "./api";
 
 const SUMMARY: [FindingStatus, string][] = [
   ["evidence_found", "found"],
@@ -30,4 +37,34 @@ export function runSummary(run: PackRow["latest_run"]): string {
     ([status, label]) => `${run.counts[status]} ${label}`,
   );
   return parts.length > 0 ? parts.join(" · ") : RUN_STATUS[run.status];
+}
+
+export const PACK_STATUS: Record<PackStatus, string> = {
+  empty: "Empty",
+  uploaded: "Uploaded",
+  parsing: "Parsing",
+  parsed: "Parsed",
+  parsed_with_issues: "Parsed with issues",
+  parse_failed: "Parse failed",
+};
+
+export const INDEX_STATUS: Record<IndexStatus, string> = {
+  pending: "Not parsed",
+  indexing: "Parsing",
+  done: "Parsed",
+  failed: "Parse failed",
+};
+
+export const KIND: Record<DocumentKind, string> = {
+  sustainability: "Sustainability report",
+  annual: "Annual report",
+  other: "Other",
+};
+
+/** Default document type from the file name; the user can change it. */
+export function guessKind(filename: string): DocumentKind {
+  const name = filename.toLowerCase();
+  if (/sustainab|climate|esg/.test(name)) return "sustainability";
+  if (/annual/.test(name)) return "annual";
+  return "other";
 }
