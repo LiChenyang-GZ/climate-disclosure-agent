@@ -52,8 +52,8 @@ class WorkerDeps:
     budget: Budget
     emit: EventSink = noop_sink
     lc_pack: Any = None
-    step_cap: int = 12
-    token_cap: int = 150_000  # D79
+    step_cap: int = 20  # D15
+    token_cap: int = 300_000  # D79
     max_output_tokens: int = 2000
     tool_timeout_s: float = 10.0
 

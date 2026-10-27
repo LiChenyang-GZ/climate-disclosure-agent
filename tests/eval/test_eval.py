@@ -342,8 +342,8 @@ def test_step_cap_argument(monkeypatch, tmp_path):
 
     p = run_eval.parser()
     base = ["--pack", str(PACK), "--out", str(tmp_path)]
-    assert p.parse_args(base).step_cap == 12
-    assert p.parse_args([*base, "--step-cap", "20"]).step_cap == 20
+    assert p.parse_args(base).step_cap == 20
+    assert p.parse_args([*base, "--step-cap", "12"]).step_cap == 12
 
     def fail(*args, **kwargs):
         raise AssertionError("must not reach database or model")
@@ -369,8 +369,8 @@ def test_token_cap_argument(monkeypatch, tmp_path):
 
     p = run_eval.parser()
     base = ["--pack", str(PACK), "--out", str(tmp_path)]
-    assert p.parse_args(base).token_cap == 150_000
-    assert p.parse_args([*base, "--token-cap", "300000"]).token_cap == 300_000
+    assert p.parse_args(base).token_cap == 300_000
+    assert p.parse_args([*base, "--token-cap", "150000"]).token_cap == 150_000
 
     def fail(*args, **kwargs):
         raise AssertionError("must not reach database or model")

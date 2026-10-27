@@ -247,7 +247,10 @@ async def test_step_cap(harness, submit):
     r, llm = await run(
         harness,
         [
-            *[turn("list_documents", {}) for _ in range(11)],
+            *[
+                turn("list_documents", {})
+                for _ in range(WorkerDeps.__dataclass_fields__["step_cap"].default - 1)
+            ],
             turn() if submit else turn("list_documents", {}),
         ],
     )
