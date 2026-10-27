@@ -40,7 +40,7 @@ Full definitions live in `checks.yaml` (task T03).
 | Error | System error; reason recorded |
 
 ## Inconsistency types (each from a published source)
-T1 past weather losses vs unidentified climate risk (ASIC 2026 obs. 2) · T2 climate commitments vs financial statement assumptions (Carbon Tracker; ESMA) · T3 annual report restates climate figures differently (RG 280.116) · T4 regulatory target mentioned in annual report but missing from targets (ASIC obs. 6) · T5 non-compliant cross-reference (ASIC obs. 5; RG 280.86–88) · T6 reporting period mismatch (RG 280.95).
+T1 past weather losses vs unidentified climate risk (ASIC 2026 obs. 2; REP 839 p11) · T2 climate commitments vs financial statement assumptions (Carbon Tracker; ESMA; REP 839 p4, connecting the sustainability report with the financial report) · T3 annual report restates climate figures differently (RG 280.116) · T4 regulatory target mentioned in annual report but missing from targets (ASIC obs. 6; REP 839 pp21–22) · T5 non-compliant cross-reference (ASIC obs. 5; REP 839 pp24–25; RG 280.86–88) · T6 reporting period mismatch (RG 280.95). Sources checked against the PDFs on 27 Oct 2026.
 
 ## Out of scope
 Real authentication; AASB S1 or other standards; compliance verdicts, scores or rankings; recalculating emissions; editing check definitions in the UI; scanned PDFs / OCR; numbers inside chart images; auto-downloading reports; a chat box in the UI; mobile layout; cloud deployment (local only for now).
