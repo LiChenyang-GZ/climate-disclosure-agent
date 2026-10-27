@@ -9,7 +9,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, TypeAdapter, ValidationError
-from sqlalchemy import insert, select, text, update
+from sqlalchemy import func, insert, select, text, update
 from sqlalchemy.exc import IntegrityError
 
 from cda.api import deps, service
@@ -67,10 +67,34 @@ async def create_pack(body: PackInput, conn: Conn, actor: Actor) -> dict[str, An
     ).first()
     if membership is None:
         raise APIError(404, "not_found", "Team not found")
+    company = " ".join(body.company.split())
+    # Serialise creation per company and year so concurrent duplicates cannot both pass.
+    await conn.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 1))"),
+        {"key": f"pack:{company.lower()}:{body.reporting_year}"},
+    )
+    existing = (
+        await conn.execute(
+            select(Pack.id).where(
+                func.lower(func.regexp_replace(func.btrim(Pack.company), r"\s+", " ", "g"))
+                == company.lower(),
+                Pack.reporting_year == body.reporting_year,
+            )
+        )
+    ).first()
+    if existing is not None:
+        raise APIError(
+            409,
+            "duplicate_pack",
+            "A pack for this company and year already exists",
+            pack_id=str(existing[0]),
+        )
     row = (
         (
             await conn.execute(
-                insert(Pack).values(**body.model_dump(), created_by=actor["id"]).returning(Pack)
+                insert(Pack)
+                .values(**(body.model_dump() | {"company": company}), created_by=actor["id"])
+                .returning(Pack)
             )
         )
         .mappings()
