@@ -179,6 +179,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--retrieval-only", action="store_true")
     p.add_argument("--embedder", choices=("bge", "hash"), default="bge")
     p.add_argument("--score-runs")
+    p.add_argument("--lc-scope", choices=("pack", "sustainability"), default="pack")
     p.add_argument("--yes", action="store_true")
     return p
 
@@ -215,6 +216,7 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "git_commit": commit,
         "date": datetime.now(UTC).isoformat(),
         "repeats": args.repeats,
+        "lc_scope": args.lc_scope,
         "methods": {},
         "changes": [c.model_dump(mode="json") for c in key.changes],
     }
@@ -239,7 +241,13 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
             ids = []
             async with open_checkpointer(url) as saver:
                 deps = RunDeps(
-                    llm, models, embedder, saver, comparer=_compare, emit=EventSink(engine).emit
+                    llm,
+                    models,
+                    embedder,
+                    saver,
+                    comparer=_compare,
+                    emit=EventSink(engine).emit,
+                    lc_scope=args.lc_scope,
                 )
                 for method in args.methods.split(","):
                     for _ in range(args.repeats):
