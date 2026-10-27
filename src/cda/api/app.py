@@ -40,8 +40,9 @@ def create_app(
     app.state.index_errors = app.state.index_state.index_errors
     app.state.document_states = app.state.index_state.document_states
     install_errors(app)
-    from cda.api.routes import findings, packs, runs
+    from cda.api.routes import findings, me, packs, runs
 
+    app.include_router(me.router)
     app.include_router(packs.router)
     app.include_router(runs.router)
     app.include_router(findings.router)

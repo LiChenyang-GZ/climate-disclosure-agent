@@ -28,6 +28,7 @@ from cda.db.models import (
     Review,
     Run,
     RunEvent,
+    Team,
     TeamMember,
     Unit,
     User,
@@ -190,15 +191,63 @@ async def list_packs(conn: AsyncConnection, actor: dict[str, Any]) -> list[dict[
     rows = (
         (
             await conn.execute(
-                visible(select(Pack, count.label("document_count")), actor["id"]).order_by(
-                    Pack.created_at, Pack.id
-                )
+                visible(
+                    select(Pack, count.label("document_count"), Team.name.label("team_name")).join(
+                        Team, Team.id == Pack.team_id
+                    ),
+                    actor["id"],
+                ).order_by(Pack.created_at, Pack.id)
             )
         )
         .mappings()
         .all()
     )
-    return [dict(r) for r in rows]
+    latest = (
+        select(Run.id, Run.pack_id, Run.status, Run.created_at)
+        .distinct(Run.pack_id)
+        .where(Run.pack_id.in_([r["id"] for r in rows]))
+        .order_by(Run.pack_id, Run.created_at.desc(), Run.id.desc())
+        .subquery()
+    )
+    runs = {r["pack_id"]: dict(r) for r in (await conn.execute(select(latest))).mappings()}
+    counts: dict[UUID, dict[str, int]] = {}
+    for rid, status, n in await conn.execute(
+        select(Finding.run_id, Finding.status, func.count())
+        .where(Finding.run_id.in_([r["id"] for r in runs.values()]))
+        .group_by(Finding.run_id, Finding.status)
+    ):
+        counts.setdefault(rid, {})[status] = n
+    result = []
+    for r in rows:
+        run = runs.get(r["id"])
+        summary = None
+        if run is not None:
+            summary = {
+                "id": run["id"],
+                "status": run["status"],
+                "created_at": run["created_at"],
+                "counts": counts.get(run["id"], {}),
+            }
+        result.append({**r, "latest_run": summary})
+    return result
+
+
+async def list_teams(conn: AsyncConnection, actor: dict[str, Any]) -> list[dict[str, Any]]:
+    mine = select(TeamMember.team_id).where(TeamMember.user_id == actor["id"])
+    rows = (
+        await conn.execute(
+            select(Team.id, Team.name, User.handle, User.display_name)
+            .join(TeamMember, TeamMember.team_id == Team.id)
+            .join(User, User.id == TeamMember.user_id)
+            .where(Team.id.in_(mine))
+            .order_by(Team.name, User.role.desc(), User.handle)
+        )
+    ).all()
+    teams: dict[UUID, dict[str, Any]] = {}
+    for tid, name, handle, display_name in rows:
+        team = teams.setdefault(tid, {"id": tid, "name": name, "members": []})
+        team["members"].append({"handle": handle, "display_name": display_name})
+    return list(teams.values())
 
 
 async def wake(conn: AsyncConnection) -> None:
