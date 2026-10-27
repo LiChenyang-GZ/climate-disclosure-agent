@@ -6,7 +6,7 @@ import { useState } from "react";
 import { NewPackDialog } from "@/components/new-pack-dialog";
 import { useUser } from "@/components/user-context";
 import type { PackRow } from "@/lib/api";
-import { fy, runSummary } from "@/lib/format";
+import { PACK_STATUS, fy, runSummary } from "@/lib/format";
 import { useLoad } from "@/lib/use-load";
 
 export default function PacksPage() {
@@ -59,6 +59,7 @@ export default function PacksPage() {
               <th className="px-4 py-2 font-medium">Company</th>
               <th className="px-4 py-2 font-medium">Year</th>
               <th className="px-4 py-2 font-medium">Files</th>
+              <th className="px-4 py-2 font-medium">Status</th>
               <th className="px-4 py-2 font-medium">Team</th>
               <th className="px-4 py-2 font-medium">Latest check</th>
             </tr>
@@ -73,6 +74,7 @@ export default function PacksPage() {
                 </td>
                 <td className="px-4 py-2">{fy(pack.reporting_year)}</td>
                 <td className="px-4 py-2">{pack.document_count}</td>
+                <td className="px-4 py-2">{PACK_STATUS[pack.status]}</td>
                 <td className="px-4 py-2">{pack.team_name}</td>
                 <td className="px-4 py-2 text-slate-700">{runSummary(pack.latest_run)}</td>
               </tr>

@@ -1,6 +1,6 @@
 import type { Page, Route } from "@playwright/test";
 
-export type Reply = { status?: number; json?: unknown; delay?: Promise<void> };
+export type Reply = { status?: number; json?: unknown; delay?: Promise<void>; abort?: boolean };
 export type Handler = (user: string, route: Route) => Reply | Promise<Reply>;
 
 export const ME: Record<string, unknown> = {
@@ -28,8 +28,35 @@ export function pack(overrides: Record<string, unknown> = {}) {
     team_id: "team-er",
     team_name: "Energy & Resources",
     document_count: 2,
+    status: "parsed",
     created_at: "2026-10-27T00:00:00Z",
     latest_run: null,
+    ...overrides,
+  };
+}
+
+export function doc(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "doc-1",
+    filename: "wattlebrook-annual-report-2026.pdf",
+    kind: "annual",
+    page_count: 39,
+    unit_count: 412,
+    index_status: "done",
+    parts: [{ kind: "sustainability", first_pdf_page: 18, last_pdf_page: 31, label: null }],
+    ...overrides,
+  };
+}
+
+export function packDetail(overrides: Record<string, unknown> = {}) {
+  return {
+    ...pack(),
+    status: "parsed",
+    team: TEAMS[0],
+    limits: { max_upload_mb: 50, max_documents: 20 },
+    active_run_id: null,
+    documents: [doc()],
+    latest_runs: [],
     ...overrides,
   };
 }
@@ -55,6 +82,10 @@ export async function mockApi(page: Page, handlers: Record<string, Handler>) {
     }
     const reply = await handler(user, route);
     if (reply.delay) await reply.delay;
+    if (reply.abort) {
+      await route.abort("failed");
+      return;
+    }
     await route.fulfill({ status: reply.status ?? 200, json: reply.json ?? {} });
   });
   return calls;

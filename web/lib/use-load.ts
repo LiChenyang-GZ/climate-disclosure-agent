@@ -9,29 +9,33 @@ export type Load<T> =
   | { state: "error"; error: ApiError }
   | { state: "ok"; data: T };
 
-/** GETs `path` whenever it or `key` changes (key = current demo user). */
+/**
+ * GETs `path` whenever it or `key` changes (key = current demo user). `reload`
+ * refetches but keeps showing the last result until the new one arrives.
+ */
 export function useLoad<T>(path: string, key: string): Load<T> & { reload: () => void } {
   const [attempt, setAttempt] = useState(0);
-  const request = `${attempt}|${key}|${path}`;
-  // A result belongs to one request; anything older reads as loading.
-  const [result, setResult] = useState<{ request: string; load: Load<T> } | null>(null);
+  const base = `${key}|${path}`;
+  const request = `${attempt}|${base}`;
+  // A result belongs to one user and path; a result for another reads as loading.
+  const [result, setResult] = useState<{ base: string; load: Load<T> } | null>(null);
 
   useEffect(() => {
     let live = true;
     api<T>(path)
-      .then((data) => live && setResult({ request, load: { state: "ok", data } }))
+      .then((data) => live && setResult({ base, load: { state: "ok", data } }))
       .catch((error: unknown) => {
         if (!live) return;
         const failure =
           error instanceof ApiError ? error : new ApiError(0, "unknown", String(error));
-        setResult({ request, load: { state: "error", error: failure } });
+        setResult({ base, load: { state: "error", error: failure } });
       });
     return () => {
       live = false;
     };
-  }, [path, request]);
+  }, [path, base, request]);
 
   const reload = useCallback(() => setAttempt((n) => n + 1), []);
-  const load: Load<T> = result?.request === request ? result.load : { state: "loading" };
+  const load: Load<T> = result?.base === base ? result.load : { state: "loading" };
   return { ...load, reload };
 }

@@ -54,6 +54,14 @@ export type FindingStatus =
 
 export type RunStatus = "queued" | "running" | "waiting_review" | "final" | "cancelled" | "failed";
 
+export type PackStatus =
+  | "empty"
+  | "uploaded"
+  | "parsing"
+  | "parsed"
+  | "parsed_with_issues"
+  | "parse_failed";
+
 export interface PackRow {
   id: string;
   company: string;
@@ -62,6 +70,7 @@ export interface PackRow {
   team_name: string;
   document_count: number;
   created_at: string;
+  status: PackStatus;
   latest_run: {
     id: string;
     status: RunStatus;
@@ -70,10 +79,34 @@ export interface PackRow {
   } | null;
 }
 
+export type DocumentKind = "sustainability" | "annual" | "other";
+export type IndexStatus = "pending" | "indexing" | "done" | "failed";
+
+export interface Part {
+  kind: DocumentKind;
+  first_pdf_page: number;
+  last_pdf_page: number;
+  label?: string | null;
+}
+
+export interface PackDocument {
+  id: string;
+  filename: string;
+  kind: DocumentKind;
+  page_count: number;
+  unit_count: number;
+  index_status: IndexStatus;
+  parts: Part[];
+}
+
 export interface PackDetail {
   id: string;
   company: string;
   reporting_year: number;
   team_id: string;
-  documents: { id: string; filename: string }[];
+  status: PackStatus;
+  team: Team;
+  limits: { max_upload_mb: number; max_documents: number };
+  active_run_id: string | null;
+  documents: PackDocument[];
 }
