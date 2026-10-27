@@ -47,6 +47,12 @@ def render_report(results: dict[str, Any]) -> str:
         lines.append(f"- {label(name)}: {results.get(name, '—')}")
     if not retrieval_only and "lc_scope" in results and "LC" in results.get("methods", {}):
         lines.append(f"- {label('lc_scope')}: {results['lc_scope']}")
+    if (
+        not retrieval_only
+        and "step_cap" in results
+        and {"A", "C"} & set(results.get("methods", {}))
+    ):
+        lines.append(f"- {label('step_cap')}: {results['step_cap']}")
     if not retrieval_only:
         methods = results.get("methods", {})
         lines += [
