@@ -335,3 +335,30 @@ def test_report_lc_scope_line():
     assert "lc scope" not in render_report(results)
     results["lc_scope"] = "sustainability"
     assert "- lc scope: sustainability" in render_report(results)
+
+
+def test_step_cap_argument(monkeypatch, tmp_path):
+    from cda.eval import run_eval
+
+    p = run_eval.parser()
+    base = ["--pack", str(PACK), "--out", str(tmp_path)]
+    assert p.parse_args(base).step_cap == 12
+    assert p.parse_args([*base, "--step-cap", "20"]).step_cap == 20
+
+    def fail(*args, **kwargs):
+        raise AssertionError("must not reach database or model")
+
+    monkeypatch.setattr(run_eval, "make_engine", fail)
+    with pytest.raises(SystemExit) as exc:
+        run_eval.main([*base, "--step-cap", "1"])
+    assert exc.value.code != 0
+
+
+def test_report_step_cap_line():
+    from cda.eval.report import render_report
+
+    results = report_fixture()
+    results["step_cap"] = 20
+    assert "step cap" not in render_report(results)  # fixture has only LC
+    results["methods"]["A"] = results["methods"]["LC"]
+    assert "- step cap: 20" in render_report(results)
