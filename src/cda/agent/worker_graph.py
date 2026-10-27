@@ -74,7 +74,7 @@ def _finish(
         check.id,
         status,
         confidence,
-        f.rationale if f else "",
+        f.rationale if f else (s.error_detail or "") if status == "error" else "",
         f.missing_aspects if f else [],
         f.relief_applied if f else False,
         reason,
@@ -89,9 +89,15 @@ def _finish(
 
 
 def _retry(
-    s: WorkerState, check: Check, message: str, *, instruction: str = "call submit_finding again"
+    s: WorkerState,
+    check: Check,
+    message: str,
+    *,
+    instruction: str = "call submit_finding again",
+    detail: str | None = None,
 ) -> None:
     s.invalid += 1
+    s.error_detail = (detail or message)[:1000]
     s.history.append(
         Message(
             "tool" if s.call else "user",
@@ -170,10 +176,10 @@ def build_graph(
                 tool_choice="submit_finding" if s.forced else "required",
                 max_output_tokens=deps.max_output_tokens,
             )
-        except ToolArgsError:
+        except ToolArgsError as exc:
             await deps.budget.settle(estimate, estimate)
             s.cost += estimate
-            _retry(s, check, "Invalid tool arguments")
+            _retry(s, check, "Invalid tool arguments", detail=f"Invalid tool arguments: {exc}")
             return state
         except Exception:
             # No usage is available for a failed request; release the reservation.
@@ -194,11 +200,17 @@ def build_graph(
         )
         s.history.append(response.message)
         if len(response.message.tool_calls) != 1:
-            _retry(s, check, "Expected exactly one tool call")
+            names = ", ".join(c.name[:100] for c in response.message.tool_calls) or "none"
+            _retry(
+                s,
+                check,
+                "Expected exactly one tool call",
+                detail=f"Expected exactly one tool call, got: {names}",
+            )
             return state
         s.call = response.message.tool_calls[0]
         if s.call.name not in {t.name for t in tools}:
-            _retry(s, check, "Unknown tool")
+            _retry(s, check, "Unknown tool", detail=f"Unknown tool: {s.call.name[:100]}")
         elif s.call.name == "submit_finding":
             s.route = "validate"
         elif s.forced:
@@ -287,7 +299,7 @@ def build_graph(
             assert isinstance(parsed, SubmitFinding)
             parsed.check_rules(check)
         except (ToolArgsError, ValueError) as exc:
-            _retry(s, check, str(exc))
+            _retry(s, check, str(exc), detail=f"submit_finding rejected: {exc}")
             return state
         s.submission = parsed
         s.route = "verify"

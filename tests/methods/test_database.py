@@ -258,3 +258,9 @@ async def test_database_worker(run_env, case, status, reason, calls):
             assert not (
                 await conn.execute(select(Evidence).where(Evidence.finding_id == fid))
             ).all()
+        if case == "rules":
+            # The rejected rule is stored, so a paid run's error can be diagnosed afterwards.
+            fid = await store_finding(conn, rid, result)
+            assert (
+                await conn.scalar(select(Finding.rationale).where(Finding.id == fid))
+            ) == "submit_finding rejected: Evidence required"
