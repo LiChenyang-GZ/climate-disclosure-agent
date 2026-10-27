@@ -25,6 +25,9 @@ class ParsedUnit:
 
 def normalize_text(text: str) -> str:
     text = unicodedata.normalize("NFKC", text).replace("\u00ad", "")
+    # Some fonts encode word spaces as control characters (QBE uses \x03, IAG \x07 and \x08),
+    # which str.split() does not treat as whitespace.
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", " ", text)
     text = re.sub(r"-\s*\r?\n\s*", "-", text)
     return " ".join(text.split())
 

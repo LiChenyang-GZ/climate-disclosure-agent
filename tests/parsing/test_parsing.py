@@ -64,6 +64,13 @@ def test_normalize():
     assert normalize_text(" \n ") == ""
 
 
+def test_normalize_control_characters_are_spaces():
+    # Word spaces encoded as control characters in real reports (QBE \x03, IAG \x07, \x08).
+    assert normalize_text("For\x03more\x03information") == "For more information"
+    assert normalize_text("Gross\x08emissions\x07target\x1b") == "Gross emissions target"
+    assert normalize_text("climate-\x03\nrelated") == "climate-related"
+
+
 @pytest.mark.parametrize("n", [0, 1, 3, 9, 263])
 def test_tokens(n):
     assert count_tokens(" ".join(["word"] * n)) == math.ceil(n * 4 / 3)
