@@ -181,6 +181,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--score-runs")
     p.add_argument("--lc-scope", choices=("pack", "sustainability"), default="pack")
     p.add_argument("--step-cap", type=int, default=RunDeps.step_cap)
+    p.add_argument("--token-cap", type=int, default=RunDeps.token_cap)
     p.add_argument("--yes", action="store_true")
     return p
 
@@ -219,6 +220,7 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "repeats": args.repeats,
         "lc_scope": args.lc_scope,
         "step_cap": args.step_cap,
+        "token_cap": args.token_cap,
         "methods": {},
         "changes": [c.model_dump(mode="json") for c in key.changes],
     }
@@ -251,6 +253,7 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                     emit=EventSink(engine).emit,
                     lc_scope=args.lc_scope,
                     step_cap=args.step_cap,
+                    token_cap=args.token_cap,
                 )
                 for method in args.methods.split(","):
                     for _ in range(args.repeats):
@@ -308,6 +311,8 @@ def main(argv: list[str] | None = None) -> None:
         p.error("repeats and budget must be positive and finite")
     if args.step_cap < 2:
         p.error("step cap must be at least 2")
+    if args.token_cap < 1:
+        p.error("token cap must be positive")
     if not methods or any(m not in ("A", "B", "C", "LC") for m in methods):
         p.error("unknown method")
     spend = (
