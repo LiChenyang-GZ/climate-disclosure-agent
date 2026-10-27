@@ -172,6 +172,31 @@ async def test_invalid_once(harness, first):
 async def test_invalid_twice(harness):
     r, _ = await run(harness, [turn(args="{"), turn(args="{")])
     assert (r.status, r.needs_review_reason) == ("error", "invalid_output")
+    assert r.rationale == "submit_finding rejected: submit_finding: Invalid JSON arguments"
+
+
+@pytest.mark.parametrize(
+    "turns,detail",
+    [
+        (
+            [FakeTurn(content="a"), FakeTurn(content="b")],
+            "Expected exactly one tool call, got: none",
+        ),
+        ([turn("nope", {}), turn("nope", {})], "Unknown tool: nope"),
+        (
+            [turn(args=submission(evidence=[])), turn(args=submission(evidence=[]))],
+            "submit_finding rejected: Evidence required",
+        ),
+    ],
+)
+async def test_invalid_twice_detail(harness, turns, detail):
+    r, _ = await run(harness, turns)
+    assert (r.status, r.needs_review_reason, r.rationale) == ("error", "invalid_output", detail)
+
+
+async def test_detail_not_kept_after_recovery(harness):
+    r, _ = await run(harness, [turn(args="{"), turn()])
+    assert r.status == "evidence_found" and "rejected" not in r.rationale
 
 
 @pytest.mark.parametrize(

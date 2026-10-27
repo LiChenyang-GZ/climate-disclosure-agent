@@ -153,20 +153,24 @@ async def test_verification(harness, quote, uid, reason):
 
 
 @pytest.mark.parametrize(
-    "response",
+    "response,detail",
     [
-        FakeTurn(content="hello"),
-        FakeTurn(tool_calls=[("wrong", {})]),
-        FakeTurn(tool_calls=[("submit_finding", "{")]),
-        turn(evidence=[]),
-        LLMBadRequest(),
-        ToolArgsError("submit_finding", "bad"),
+        (FakeTurn(content="hello"), "Expected one submit_finding call, got: none"),
+        (FakeTurn(tool_calls=[("wrong", {})]), "Expected one submit_finding call, got: wrong"),
+        (
+            FakeTurn(tool_calls=[("submit_finding", "{")]),
+            "submit_finding rejected: submit_finding: Invalid JSON arguments",
+        ),
+        (turn(evidence=[]), "submit_finding rejected: Evidence required"),
+        (LLMBadRequest(), "Model request failed: LLMBadRequest"),
+        (ToolArgsError("submit_finding", "bad"), "Invalid tool arguments: submit_finding: bad"),
     ],
 )
-async def test_invalid(harness, response):
+async def test_invalid(harness, response, detail):
     d, llm, c, cs = harness([response])
     r = await run_method_b(d, c, cs)
     assert (r.status, r.needs_review_reason, r.steps) == ("error", "invalid_output", 1)
+    assert r.rationale == detail
     assert len(llm.requests) == 1
 
 
@@ -298,4 +302,7 @@ async def test_multiple_submissions_invalid(harness):
     d, llm, c, cs = harness([response])
     result = await run_method_b(d, c, cs)
     assert (result.status, result.needs_review_reason) == ("error", "invalid_output")
+    assert (
+        result.rationale == "Expected one submit_finding call, got: submit_finding, submit_finding"
+    )
     assert len(llm.requests) == 1

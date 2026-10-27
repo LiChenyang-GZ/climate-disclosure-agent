@@ -59,15 +59,18 @@ async def run_single_call(
             tool_choice="submit_finding",
             max_output_tokens=deps.max_output_tokens,
         )
-    except ToolArgsError:
+    except ToolArgsError as exc:
         await deps.budget.settle(estimate, estimate)
         state.cost = estimate
+        state.error_detail = f"Invalid tool arguments: {exc}"[:1000]
         return finish("error", "invalid_output")
     except LLMAuthError:
         await deps.budget.settle(estimate, Decimal(0))
         raise
-    except Exception:  # noqa: BLE001 - single-call failures are invalid_output
+    except Exception as exc:  # noqa: BLE001 - single-call failures are invalid_output
         await deps.budget.settle(estimate, Decimal(0))
+        # Type only: request errors can echo prompt or response text.
+        state.error_detail = f"Model request failed: {type(exc).__name__}"
         return finish("error", "invalid_output")
     state.cost = cost_usd(price, response.usage)
     state.tokens_in, state.tokens_out = response.usage.tokens_in, response.usage.tokens_out
@@ -77,6 +80,8 @@ async def run_single_call(
     )
     calls = response.message.tool_calls
     if len(calls) != 1 or calls[0].name != "submit_finding":
+        names = ", ".join(c.name[:100] for c in calls) or "none"
+        state.error_detail = f"Expected one submit_finding call, got: {names}"
         return finish("error", "invalid_output")
     bad_aliases: set[int] = set()
     call = calls[0]
@@ -86,7 +91,8 @@ async def run_single_call(
         parsed = parse_tool_call(call, tools)
         assert isinstance(parsed, SubmitFinding)
         parsed.check_rules(check)
-    except (ToolArgsError, ValueError):
+    except (ToolArgsError, ValueError) as exc:
+        state.error_detail = f"submit_finding rejected: {exc}"[:1000]
         return finish("error", "invalid_output")
     state.submission = parsed
     state.evidence = await verifier(

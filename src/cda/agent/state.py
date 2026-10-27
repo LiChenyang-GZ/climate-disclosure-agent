@@ -45,6 +45,8 @@ class WorkerState:
     call: ToolCall | None = None
     tool_result: ToolResult | None = None
     submission: SubmitFinding | None = None
+    # Why the last output was rejected; stored as the rationale of an error finding.
+    error_detail: str | None = None
     evidence: list[EvidenceCheck] = field(default_factory=list)
     result: WorkerResult | None = None
     route: str = "build_prompt"

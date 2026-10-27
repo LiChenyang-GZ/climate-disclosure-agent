@@ -363,6 +363,9 @@ async def test_invalid_outputs(monkeypatch, turn, expected):
     deps = make_deps([turn])
     result = await lc.run_long_context(deps, load_check_set().checks[0], load_check_set())
     assert (result.status, result.needs_review_reason) == ("error", expected)
+    assert result.rationale.startswith(
+        ("Expected one submit_finding call", "submit_finding rejected: ", "Invalid tool arguments")
+    )
 
 
 async def test_budget_refusal_and_auth(monkeypatch):
