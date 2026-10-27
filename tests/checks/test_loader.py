@@ -29,7 +29,7 @@ def test_packaged_check_set_loads_with_raw_file_hash() -> None:
 
     assert len(check_set.checks) == 15
     assert check_set.ids() == list(REQUIRED_CHECK_IDS)
-    assert check_set.version == "2026.10.1"
+    assert check_set.version == "2026.10.2"
     assert len(check_set.sha256) == 64
     assert check_set.sha256 == hashlib.sha256(CHECKS_PATH.read_bytes()).hexdigest()
 
@@ -173,7 +173,7 @@ def test_missing_file_error_names_path(tmp_path: Path) -> None:
 
 def test_changing_file_content_changes_sha256(tmp_path: Path) -> None:
     raw = CHECKS_PATH.read_bytes()
-    changed = raw.replace(b"2026.10.1", b"2026.10.2", 1)
+    changed = raw.replace(b"2026.10.2", b"2026.10.3", 1)
     path = tmp_path / "checks.yaml"
     path.write_bytes(changed)
 

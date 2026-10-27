@@ -1,17 +1,23 @@
 # Climate Disclosure Agent check set.
 #
 # 11 checks from AASB S2 (governance, strategy, risk management, metrics and targets) and
-# 4 from ASIC's 2026 early observations on the first sustainability reports (A1-A4).
+# 4 from ASIC's review of the first sustainability reports (A1-A4): the early observations
+# of 18 May 2026 and Report 839 (REP 839, 21 September 2026).
 # Each check follows D38: requirement, what counts, what does not, allowed reliefs, facts to
 # extract, preferred documents. `queries` are the pre-written queries for method B (D36).
 # `min_searches` overrides the default for the "no evidence" rule (D58).
 #
-# Paragraph references follow AASB S2 (which keeps IFRS S2 numbering) and ASIC RG 280.
-# Status: to be confirmed against the AASB S2 PDF before the real-company evaluation (T23).
+# Sources, checked against the PDFs in data/reference/ on 27 Oct 2026 (D73):
+# - AASB S2 (September 2024, F2024L01472). Body paragraphs keep the IFRS S2 numbers; some are
+#   deleted by the AASB (12, 23, 32, 37). "Appendix D" paragraphs use AASB S1 numbering, so
+#   Appendix D B45-B47 (cross-references) are not Appendix B B45-B47 (Scope 3).
+# - ASIC RG 280 (31 March 2025). REP 839 page numbers are PDF pages (equal to printed pages).
+# Frozen for the real-company evaluation (T23): changing this file changes the check-set hash,
+# so bump `version` with any edit.
 #
 # Wording rule: checks locate evidence; they never judge compliance.
 
-version: "2026.10.1"
+version: "2026.10.2"
 
 defaults:
   min_searches: 4
@@ -75,7 +81,7 @@ checks:
     pillar: strategy
     source:
       standard: AASB S2
-      references: ["para 10", "para 11", "para 12"]
+      references: ["para 10", "para 11"]
     requirement: >-
       Describe the climate-related risks and opportunities that could reasonably be expected to
       affect the entity's prospects, state whether each risk is a physical or transition risk,
@@ -165,7 +171,7 @@ checks:
     source:
       standard: AASB S2
       references: ["paras 15-21"]
-      asic: "2026 early observations: financial effects often not quantified, with no explanation"
+      asic: "REP 839 pp13-15: financial effects often only qualitative, without explaining why quantitative information was not provided (para 21)"
     requirement: >-
       Disclose quantitative and qualitative information about how climate-related risks and
       opportunities have affected the entity's financial position, performance and cash flows
@@ -203,8 +209,9 @@ checks:
     pillar: strategy
     source:
       standard: AASB S2
-      references: ["para 22"]
-      law: "Corporations Act 2001 s296D(2B)"
+      references: ["para 22", "paras B1-B18"]
+      law: "Corporations Act 2001 s296D(2B); RG 280.97-280.101 (a scenario below 2.5°C does not meet s296D(2B)(b))"
+      asic: "REP 839 pp16-17: scenarios used, why they are relevant, and whether they relate to transition or physical risks"
     requirement: >-
       Disclose the entity's climate resilience assessed using climate-related scenario analysis,
       including at least two scenarios: one consistent with limiting warming to 1.5°C and one
@@ -220,7 +227,7 @@ checks:
       - Scenario names with no temperature outcome and no way to infer one
     allowed_reliefs:
       - id: qualitative_scenario_analysis
-        description: In early years the entity may use qualitative scenario analysis, provided both temperature pathways are still covered.
+        description: The entity may use qualitative scenario analysis where that approach is commensurate with its circumstances (AASB S2 paras 22 and B17; RG 280.108), provided both temperature pathways are still covered.
     facts:
       - name: scenario_temperature
         unit: degC
@@ -239,7 +246,7 @@ checks:
     pillar: risk_management
     source:
       standard: AASB S2
-      references: ["paras 24-26"]
+      references: ["paras 24-25"]
     requirement: >-
       Describe the processes and policies used to identify, assess, prioritise and monitor
       climate-related risks and opportunities (including inputs, parameters and the use of
@@ -268,7 +275,7 @@ checks:
     pillar: metrics_targets
     source:
       standard: AASB S2
-      references: ["para 29(a)", "para C4(a)"]
+      references: ["para 29(a)", "paras B23-B25 (method required by a jurisdictional authority, such as NGER)", "para C4(a) (first-year measurement relief)", "para C4(b) (first-year Scope 3 relief)"]
     requirement: >-
       Disclose absolute gross Scope 1 and Scope 2 greenhouse gas emissions for the reporting
       period in tonnes of CO2-equivalent (Scope 2 on a location-based approach), the measurement
@@ -358,7 +365,7 @@ checks:
     source:
       standard: AASB S2
       references: ["paras 33-36"]
-      asic: "2026 early observations: targets required by law (for example Safeguard Mechanism baselines) omitted"
+      asic: "early observation 6; REP 839 p4 and pp21-22: targets required by law (for example the Safeguard Mechanism) omitted"
     requirement: >-
       Disclose the quantitative and qualitative climate-related targets the entity has set and
       any targets it is required to meet by law or regulation (for example Safeguard Mechanism
@@ -398,8 +405,8 @@ checks:
     title: No impermissible disclaimer
     pillar: asic_review
     source:
-      standard: ASIC 2026 early observations
-      references: ["observation 1", "ASIC RG 280 (disclaimers; paragraph to be confirmed)"]
+      standard: ASIC 2026 early observations and REP 839
+      references: ["early observation 1", "REP 839 p4 (action item) and pp24-25 (disclaimers)", "by analogy RG 228 Table 3 and RG 111.123-111.124"]
     requirement: >-
       The sustainability report must not contain a broad disclaimer that tells readers not to
       rely on the mandatory climate disclosures or disclaims responsibility for them.
@@ -424,8 +431,8 @@ checks:
     title: Weather-related financial effects in the annual report reflected as climate risks
     pillar: asic_review
     source:
-      standard: ASIC 2026 early observations
-      references: ["observation 2", "AASB S2 para B9 (past events as reasonable and supportable information)"]
+      standard: ASIC 2026 early observations and REP 839
+      references: ["early observation 2", "REP 839 p11 (past events)", "AASB S2 paras 11 and B9 (past events as reasonable and supportable information)"]
     requirement: >-
       If the annual report or financial statements describe financial effects of extreme weather
       or other climate-related physical events (such as flood or bushfire losses, insurance
@@ -456,8 +463,8 @@ checks:
     pillar: asic_review
     source:
       standard: ASIC RG 280
-      references: ["RG 280.86-280.88", "AASB S2 para 63, B45-B47 (cross-referenced information)"]
-      asic: "2026 early observations: observation 5 (cross-references)"
+      references: ["RG 280.86-280.88", "AASB S2 Appendix D paras 63 and B45-B47 (information included by cross-reference)"]
+      asic: "early observation 5; REP 839 pp24-25: cross-references to information not available on the same terms and at the same time, such as a third-party website behind a paywall or the entity's website"
     requirement: >-
       Where mandatory climate information is included by cross-reference, the reference must
       identify the specific document and the location within it (section or page), and the
@@ -487,8 +494,8 @@ checks:
     title: Mandatory disclosures clearly identifiable
     pillar: asic_review
     source:
-      standard: ASIC 2026 early observations
-      references: ["observation 4"]
+      standard: ASIC 2026 early observations and REP 839
+      references: ["early observation 4", "REP 839 pp24-25 (not obscured; index table encouraged)", "AASB S2 Appendix D paras 15(b), 62 and B27", "RG 280.92-280.94"]
     requirement: >-
       Mandatory climate disclosures should be clearly identifiable, for example through an index
       table mapping AASB S2 requirements to locations, or by a clear separation between the
