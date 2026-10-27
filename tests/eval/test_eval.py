@@ -315,3 +315,23 @@ def test_real_report_no_quotes():
     assert "agreement with the reference answers" in text
     assert "accuracy" not in text.lower()
     assert "PRIVATE QUOTE" not in text
+
+
+def test_lc_scope_argument():
+    from cda.eval import run_eval
+
+    p = run_eval.parser()
+    base = ["--pack", str(PACK), "--out", "x"]
+    assert p.parse_args(base).lc_scope == "pack"
+    assert p.parse_args([*base, "--lc-scope", "sustainability"]).lc_scope == "sustainability"
+    with pytest.raises(SystemExit):
+        p.parse_args([*base, "--lc-scope", "climate"])
+
+
+def test_report_lc_scope_line():
+    from cda.eval.report import render_report
+
+    results = report_fixture()
+    assert "lc scope" not in render_report(results)
+    results["lc_scope"] = "sustainability"
+    assert "- lc scope: sustainability" in render_report(results)
