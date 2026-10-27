@@ -61,7 +61,7 @@ def test_exact_table_and_rows(tmp_path):
     assert table.text == MARKDOWN
     assert table.token_count == count_tokens(MARKDOWN)
     assert [u.text for u in result.units if u.kind == "table_row"] == ROW_TEXTS
-    assert result.parser_version.startswith("cda-parse-3/")
+    assert result.parser_version.startswith("cda-parse-4/")
 
 
 def test_covered_text_and_order(tmp_path):

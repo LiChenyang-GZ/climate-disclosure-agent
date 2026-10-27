@@ -131,6 +131,6 @@ def parse_pdf(
         return ParsedDocument(
             hashlib.sha256(content).hexdigest(),
             doc.page_count,
-            f"cda-parse-3/pymupdf-{pymupdf.VersionBind}",
+            f"cda-parse-4/pymupdf-{pymupdf.VersionBind}",
             build_units(pages),
         )
