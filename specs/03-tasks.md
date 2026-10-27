@@ -73,17 +73,25 @@ Section numbers refer to `02-design.md`; D-numbers to its decision digest (§15)
 | T22 | mcp (Python SDK, stdio) | §12 | D13, D51 |
 | T23 | — | §5, §13 | D55, D69, D70, D71, D72, D73 |
 
-## Phase 2 — after 31 Oct (Claude Code, no OpenAI credits)
+## Phase 2 — UI and extras (Claude Code writes the code, no OpenAI credits)
 
-| ID | Task |
-|---|---|
-| U1–U5 | Next.js UI: packs, pack detail, new check, progress (SSE), report, finding detail and review; Playwright tests for each state in PRD 9.1 |
-| X1 | Docx / xlsx parsing |
-| X2 | OneDrive import (Microsoft Graph) |
-| X3 | Salesforce case push |
-| X4 | Claude skill on top of the MCP server |
-| X5 | Claude Code hooks |
-| X6 | README, five screenshots, three-minute video script |
+Started 27 Oct 2026. Claude writes code and tests directly on `task/<ID>` branches; same review and merge rules as Phase 1 (`CLAUDE.md` steps 4–7, without Codex). UI decisions: D80–D82.
+
+| ID | Task | Depends on | Tier | PRD | Batch |
+|---|---|---|---|---|---|
+| U1 | `web/` skeleton (Next.js, TypeScript, Tailwind, Playwright, CI job); top bar with demo-user switch; Packs page (empty / not assigned / loading / error + Retry / rows with latest-run summary); New pack dialog (validation, duplicate, server error). Backend: `GET /me`, `GET /teams`, latest-run summary and team name on `GET /packs`, duplicate company + year → 409 | T20 | normal | 6.1, 6.2; 9.1 #1 | P1 |
+| U2 | Pack detail: document list, upload (type guessed from file name, unsupported format, too large, duplicate skipped, 20-file limit, per-file retry), sustainability part page range, Parse with live status, "no sustainability report" banner, delete file, New check button rules | U1 | normal | 6.3; 9.1 #2, #3 | P1 |
+| U3 | New check dialog (method, model, checks, budget, estimate; one run per click via `Idempotency-Key`; "API key not set"; "already running on this pack") and progress page (SSE through the proxy, per-check rows, reconnect banner with polling fallback, cost / budget bar, Cancel, Error / Stopped: budget / Cancelled / Failed) | U2 | normal | 6.4, 6.5; 9.1 #4, #5 | P2 |
+| U4 | Report page: header facts, Draft / Final, fixed disclaimer line, status counts as filters, table, export (md / json / csv), in-progress and failed states | U3 | normal | 6.6; 9.1 #6 | P2 |
+| U5 | Finding detail and review: rationale and requirement source, evidence cards, source viewer (unit + neighbours, Open PDF at page), inconsistency side by side, "relief applied", agent trace; review form (note rule, optimistic lock, server error, last review → Final); injection text shown as data | U4 | strict | 6.7; 9.1 #7, #8, #9 | P3 |
+| X1 | Docx / xlsx parsing into the same units (paragraphs, table rows) with page = section / sheet locator | T04 | normal | 6.3 | P4 |
+| X4 | Claude skill that drives the MCP server (`list_packs` → `start_check` → `get_findings`), with the MCP permission state test (9.1 #10) | T22 | normal | 6.8; 9.1 #10 | P4 |
+| X5 | Claude Code hooks for this repo (e.g. block edits to protected paths, run ruff on edited Python) | — | normal | — | P4 |
+| X2 | OneDrive / SharePoint import (Microsoft Graph, device-code sign-in); tested against recorded responses, real tenant later (Christy, 27 Oct) | U2 | normal | 6.9 | P5 |
+| X3 | Salesforce push of follow-ups as Cases (OAuth, idempotent per finding); tested against recorded responses, real org later (Christy, 27 Oct) | U5 | normal | 6.10 | P5 |
+| X6 | README (comparison table from real runs), five screenshots, three-minute video script | all | normal | 9.1, 9.3 | P6 |
+
+Batches: P1 = U1, U2 · P2 = U3, U4 · P3 = U5 · P4 = X1, X4, X5 · P5 = X2, X3 · P6 = X6.
 
 ## Estimated OpenAI spend (Phase 1 coding)
 

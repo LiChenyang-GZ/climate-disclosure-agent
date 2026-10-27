@@ -2,7 +2,7 @@
 
 This is the source of truth for **how** the system is built. `01-requirements.md` says what it does; `03-tasks.md` says in what order it is built. If code and this file disagree, raise it in the PR — do not silently pick one.
 
-Decisions are numbered **D1–D79**. Task specs cite them by number (e.g. "follow D35, D58").
+Decisions are numbered **D1–D82**. Task specs cite them by number (e.g. "follow D35, D58").
 
 ## 1. Tech stack
 
@@ -25,7 +25,7 @@ Decisions are numbered **D1–D79**. Task specs cite them by number (e.g. "follo
 | Retries | `tenacity` | D20 |
 | Synthetic PDFs | `reportlab` | T15 only |
 | Containers | Docker Compose: `db`, `api`, `worker`, optional `langfuse` | local only, no cloud |
-| UI (phase 2) | Next.js + TypeScript, Playwright | not in phase 1 |
+| UI (phase 2) | Next.js (App Router) + TypeScript + Tailwind CSS, npm; Playwright (Chromium) | in `web/`; D80–D82 |
 
 Exact versions: latest stable at the time of T00, pinned in `uv.lock`. Do not add a dependency that is not in this table without saying why in the PR.
 
@@ -195,6 +195,13 @@ LC details (T17): one call per check with the whole pack (paragraph and table-ro
 ## 11. API (T20)
 `X-Demo-User: sarah|alex` header selects the user (no real auth). Routes: `POST/GET /packs`, `POST /packs/{id}/documents` (upload), `POST /packs/{id}/parse`, `POST /runs` (needs `Idempotency-Key`), `GET /runs/{id}`, `GET /runs/{id}/events` (SSE), `POST /runs/{id}/cancel`, `GET /runs/{id}/findings`, `GET /findings/{id}`, `POST /findings/{id}/reviews` (lead only; `version` for optimistic lock; note required), `GET /runs/{id}/export?format=md|json|csv`. Quotes are returned as plain text; Markdown export escapes special characters (D50).
 
+### 11.1 Web UI (U1–U5)
+- `web/` is a Next.js app (App Router, TypeScript strict, Tailwind CSS, npm). Pages: `/` packs, `/packs/[id]`, `/runs/[id]` progress, `/runs/[id]/report`, `/findings/[id]`.
+- The browser only talks to Next.js. A catch-all route handler `web/app/api/[...path]/route.ts` forwards to FastAPI (`CDA_API_URL`, default `http://127.0.0.1:8000`) and adds `X-Demo-User` from the `cda_user` cookie (default `sarah`), streaming the response body so SSE passes through (D80).
+- All data is fetched in client components from `/api/...`; no server-side data fetching, so Playwright can mock the API at the browser boundary (D81).
+- Permissions stay in the API. The UI hides controls the current user cannot use (e.g. New pack for alex) but never relies on that; a 404 from the API on a page the new user cannot see sends them to `/` with "You don't have access to that page as alex." (PRD 6.1).
+- Packs belong to a team (§4), so "team members" in the PRD are chosen by picking a team; the UI shows the team's members. Editing team membership is out of scope for the UI (D82).
+
 ## 12. MCP server (T22)
 Stdio, local only. Calls the same Python functions as the API, including permission functions (D51). Tools: `list_packs`, `get_run`, `get_findings`, `search_pack`, `start_check`. No review through MCP.
 
@@ -299,3 +306,6 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 77 | Keyword search matches any of the query's terms (OR of the stemmed lexemes) and ranks by `ts_rank_cd`; AND semantics (`websearch_to_tsquery`) returned nothing for 5–9-word agent queries in the first paid eval |
 | 78 | LLM client uses the OpenAI Responses API: both models reject function tools on Chat Completions with reasoning on (sol cannot turn reasoning off); no `temperature` or `seed` (rejected); `reasoning.effort` per model in `config/models.yaml`; stateless calls (`store=false`), tool results sent back as `function_call` + `function_call_output` items |
 | 79 | Token cap per check raised from 60k to 150k: the cap counts every token sent across a check's calls (each step resends the history), and in the second paid luna run 80–87 % of agent checks stopped at 60k (mean 66.6k, about 9 steps) once keyword search returned hits; most of those tokens are cached input. **Raised again to 300k on 27 Oct** (Christy): on QBE (real report, about 6,400 units) agent checks still stopped at 150k after 13–15 steps; with 20 steps / 300k, agreement with the reference answers went from 5 to 10 of 15 (A) and 6 to 9 of 15 (C), cap hits 60 % → 13–20 %, cost per agent run about $0.18 → $0.28 (luna, one run each) |
+| 80 | The browser talks only to Next.js; a catch-all route handler proxies `/api/*` to FastAPI and sets `X-Demo-User` from a cookie. `EventSource` cannot send headers, and this keeps the API unchanged and needs no CORS |
+| 81 | UI data is fetched client-side from `/api/*`. Playwright tests for the PRD 9.1 states mock `/api/*` with `page.route` and run in CI with no backend; one smoke test against the real compose stack runs locally only |
+| 82 | Pack "members" are the pack's team (packs.team_id); the New pack dialog picks one of the lead's teams and shows its members. No UI for editing team membership |
