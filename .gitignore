@@ -9,6 +9,7 @@ __pycache__/
 # Real-company data (D72): PDFs, reference documents and real answer keys are never committed
 data/real/**/*.pdf
 data/real/**/answer_key*.yaml
+data/real/**/pages/
 data/reference/
 
 # Codex sandbox caches
