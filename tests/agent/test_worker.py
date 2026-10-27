@@ -433,33 +433,29 @@ def test_prompt_hash(tmp_path):
     assert prompt_sha256(tmp_path) != before
 
 
-async def test_fact_unit_rule(harness):
+async def test_uncited_fact_dropped(harness):
     from cda.checks.models import FactSpec
 
+    def fact(unit_id, raw):
+        return {
+            "name": "amount",
+            "value": 1,
+            "unit": None,
+            "scope": None,
+            "year": None,
+            "unit_id": unit_id,
+            "raw": raw,
+        }
+
+    # An uncited fact used to reject the whole finding; now only that fact is dropped.
     d, llm, c, cs = harness(
-        [
-            turn(
-                args=submission(
-                    facts=[
-                        {
-                            "name": "amount",
-                            "value": 1,
-                            "unit": None,
-                            "scope": None,
-                            "year": None,
-                            "unit_id": str(uuid4()),
-                            "raw": "1",
-                        }
-                    ]
-                )
-            ),
-            turn(),
-        ]
+        [turn(args=submission(facts=[fact(str(uuid4()), "1"), fact(UID, "2")]))]
     )
     c = c.model_copy(update={"facts": [FactSpec(name="amount", unit="t", description="Amount")]})
     r = await run_worker(d, c, cs)
     assert r.status == "evidence_found"
-    assert "call submit_finding again" in llm.requests[1]["messages"][-2].content
+    assert [f.raw for f in r.facts] == ["2"]
+    assert len(llm.requests) == 1
 
 
 async def test_tool_args_error(harness):

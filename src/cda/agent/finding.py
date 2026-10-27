@@ -49,6 +49,20 @@ class SubmitFinding(Args):
     evidence: list[EvidenceArgs] = Field(max_length=10)
     facts: list[FactArgs] = Field(max_length=20)
 
+    def drop_uncited_facts(self) -> int:
+        """Drop facts whose unit is not in the evidence list; return how many were dropped.
+
+        Uncited facts made check_rules reject the whole finding (most invalid_output
+        errors in the 27 Oct dev-set runs). No-evidence findings keep their own rule.
+        """
+        if self.status == "no_evidence_found":
+            return 0
+        ids = {UUID(e.unit_id) for e in self.evidence}
+        kept = [f for f in self.facts if UUID(f.unit_id) in ids]
+        dropped = len(self.facts) - len(kept)
+        self.facts = kept
+        return dropped
+
     def check_rules(self, check: Check) -> None:
         if self.status in {"evidence_found", "partial_evidence"} and not self.evidence:
             raise ValueError("Evidence required")
