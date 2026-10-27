@@ -31,14 +31,15 @@ def evidence_matches(found: Location, key: Location) -> bool:
     return bool(a and b) and (a in b or b in a or token_overlap(a, b))
 
 
+# needs_review reasons that flag an inconsistency: an answer, not an abstention.
+INCONSISTENCY_FLAGS = frozenset(
+    {"possible_inconsistency", "regulatory_target_missing", "cross_reference_unclear", "t2_flag"}
+)
+
+
 def status_matches(status: str, key_status: str, reason: str | None = None) -> bool:
     if key_status == "inconsistent" and status == "needs_review":
-        return reason in {
-            "possible_inconsistency",
-            "regulatory_target_missing",
-            "cross_reference_unclear",
-            "t2_flag",
-        }
+        return reason in INCONSISTENCY_FLAGS
     return {
         "evidence_found": "found",
         "partial_evidence": "partial",

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from cda.eval.answer_key import AnswerKey, Cell
-from cda.eval.match import evidence_matches, status_matches
+from cda.eval.match import INCONSISTENCY_FLAGS, evidence_matches, status_matches
 
 
 @dataclass
@@ -67,9 +67,25 @@ def score_run(
                 for k in c.evidence
             )
 
+        def abstained(c: Cell) -> bool:
+            f = by_id.get(c.check_id)
+            return (
+                f is None
+                or f.status in {"error", "not_checked"}
+                or (f.status == "needs_review" and f.needs_review_reason not in INCONSISTENCY_FLAGS)
+            )
+
+        answered = [c for c in applicable if not abstained(c)]
         return {
             "status_accuracy": ratio(sum(matched(c) for c in applicable), len(applicable)),
             "evidence_recall": ratio(sum(hit(c) for c in with_evidence), len(with_evidence)),
+            # Real reference answers are mostly "found", so status agreement alone hides
+            # whether a method beats guessing; report abstentions and the constant guess.
+            "abstain_rate": ratio(len(applicable) - len(answered), len(applicable)),
+            "answered_status_accuracy": ratio(sum(matched(c) for c in answered), len(answered)),
+            "always_found_baseline": ratio(
+                sum(c.status == "found" for c in applicable), len(applicable)
+            ),
         }
 
     result: dict[str, Any] = scores(key.cells)

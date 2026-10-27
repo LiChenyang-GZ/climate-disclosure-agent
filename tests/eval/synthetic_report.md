@@ -7,10 +7,11 @@
 - git commit: 123
 - date: 2026-01-01
 - repeats: 1
+- always found baseline (status): 0.467
 
-| Method | status accuracy | evidence recall | item recall | citation accuracy | needs review rate | error rate | mean steps | cap hit rate | cost | wall time |
-|---|---|---|---|---|---|---|---|---|---|---|
-| LC | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) |
+| Method | status accuracy | abstain rate | answered status accuracy | evidence recall | item recall | citation accuracy | needs review rate | error rate | mean steps | cap hit rate | cost | wall time |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| LC | 0.000–0.000 (mean 0.000) | 1.000–1.000 (mean 1.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) | 0.000–0.000 (mean 0.000) |
 
 ## Injection gate
 - LC: PASS 1/1
