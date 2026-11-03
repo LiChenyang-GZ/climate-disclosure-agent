@@ -2,7 +2,7 @@
 
 This is the source of truth for **how** the system is built. `01-requirements.md` says what it does; `03-tasks.md` says in what order it is built. If code and this file disagree, raise it in the PR — do not silently pick one.
 
-Decisions are numbered **D1–D83**. Task specs cite them by number (e.g. "follow D35, D58").
+Decisions are numbered **D1–D85**. Task specs cite them by number (e.g. "follow D35, D58").
 
 ## 1. Tech stack
 
@@ -25,7 +25,7 @@ Decisions are numbered **D1–D83**. Task specs cite them by number (e.g. "follo
 | Retries | `tenacity` | D20 |
 | Synthetic PDFs | `reportlab` | T15 only |
 | Containers | Docker Compose: `db`, `api`, `worker`, optional `langfuse` | local only, no cloud |
-| UI (phase 2) | Next.js (App Router) + TypeScript + Tailwind CSS, npm; Playwright (Chromium) | in `web/`; D80–D83 |
+| UI (phase 2) | Next.js (App Router) + TypeScript + Tailwind CSS, npm; Playwright (Chromium) | in `web/`; D80–D85 |
 
 Exact versions: latest stable at the time of T00, pinned in `uv.lock`. Do not add a dependency that is not in this table without saying why in the PR.
 
@@ -202,6 +202,8 @@ LC details (T17): one call per check with the whole pack (paragraph and table-ro
 - Permissions stay in the API. The UI hides controls the current user cannot use (e.g. New pack for alex) but never relies on that; a 404 from the API on a page the new user cannot see sends them to `/` with "You don't have access to that page as alex." (PRD 6.1).
 - Packs belong to a team (§4), so "team members" in the PRD are chosen by picking a team; the UI shows the team's members. Editing team membership is out of scope for the UI (D82).
 - New check (U3): a pack that is Parsed with issues can be checked; documents whose index failed are skipped, stored on the run (`runs.skipped_documents`) and excluded by the tools, and the progress page lists them. A run may cover a subset of checks (`runs.check_ids`). `POST /runs` refuses a second active run on the pack (409 `run_active`) and, unless the fake model is on, a missing API key (409 `llm_key_missing`). `CDA_FAKE_LLM=1` makes the worker use a scripted fake model, for tests and local smoke only (D83).
+- OneDrive / SharePoint import (X2): device-code sign-in to Microsoft Graph with read-only scopes; tokens only in API memory; imported files go through the upload path and record `documents.source` (drive, item, path, etag); re-sync ingests a changed file as a new document and soft-deletes the old one, and only marks files removed in Graph (D84).
+- Salesforce (X3): connected-app client credentials from settings or an in-memory override, never stored; a pack links one Account (`packs.salesforce_account`); follow-ups become Cases idempotently per finding (`salesforce_cases`). The send button waits for U4 / U5 (D85).
 
 ## 12. MCP server (T22)
 Stdio, local only. Calls the same Python functions as the API, including permission functions (D51). Tools: `list_packs`, `get_run`, `get_findings`, `search_pack`, `start_check`. No review through MCP.
@@ -311,3 +313,5 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 81 | UI data is fetched client-side from `/api/*`. Playwright tests for the PRD 9.1 states mock `/api/*` with `page.route` and run in CI with no backend; one smoke test against the real compose stack runs locally only |
 | 82 | Pack "members" are the pack's team (packs.team_id); the New pack dialog picks one of the lead's teams and shows its members. No UI for editing team membership |
 | 83 | Parsed with issues can start a check: failed documents are skipped, stored on the run and excluded by the tools (PRD 6.3; "say what could not be read"). Runs can cover a subset of checks. One active run per pack via the API. `CDA_FAKE_LLM` worker switch, off by default, for tests and smoke without OpenAI credits (Christy, 3 Nov) |
+| 84 | OneDrive / SharePoint import: device-code flow (no redirect URI locally), read-only scopes, tokens in API memory only; same pipeline as uploads; `documents.source` with etag for re-sync; changed file → new document + soft delete of the old (units immutable, D52); removed in Graph → marked, never deleted. Tested with recorded Graph responses (Christy, 27 Oct) |
+| 85 | Salesforce: client-credentials flow, credentials from settings / in-memory override, never in the database; pack ↔ Account link and per-finding Case records make the push idempotent; eligible findings are inconsistent, partial and no evidence; send button deferred to U4 / U5. Tested with recorded responses |
