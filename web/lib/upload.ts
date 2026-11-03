@@ -50,8 +50,15 @@ export function uploadErrorMessage(result: UploadResult, maxMb: number): string 
     case "encrypted":
       return "Password protected";
     case "invalid_pdf":
+    case "invalid_file":
     case "page_timeout":
       return "Couldn't read this file";
+    case "empty_document":
+      return "No text found in this file";
+    case "too_large":
+      return "Too large to read (max 20,000 cells)";
+    case "unsupported_format":
+      return "Unsupported format";
     case "too_many_pages":
       return "Too many pages";
     case "upload_too_large":

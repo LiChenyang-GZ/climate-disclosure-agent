@@ -15,15 +15,19 @@ from sqlalchemy.exc import IntegrityError
 from cda.api import deps, service
 from cda.api.deps import Actor, Conn, audit, lead
 from cda.api.errors import APIError, run_errors
-from cda.api.storage import document_path, safe_filename
+from cda.api.storage import document_path, office_suffix, safe_filename
 from cda.db.enums import DocumentKind
 from cda.db.models import Document, Pack, Run, TeamMember
 from cda.indexing.index import index_document
 from cda.parsing.parts import Part, replace_parts
 from cda.parsing.pdf import ParseError
-from cda.parsing.store import ingest_pdf
+from cda.parsing.store import ingest_document
 
 router = APIRouter()
+OFFICE_TYPES = {
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+}
 
 MAX_DOCUMENTS = 20
 
@@ -161,8 +165,9 @@ async def upload_document(
     content = await file.read(limit + 1)
     if len(content) > limit:
         raise APIError(413, "upload_too_large", "Upload exceeds size limit")
-    if not content.startswith(b"%PDF-"):
-        raise APIError(415, "invalid_pdf", "A PDF file is required")
+    office = office_suffix(file.filename)
+    if office is None and not content.startswith(b"%PDF-"):
+        raise APIError(415, "unsupported_format", "Upload a PDF, .docx or .xlsx file")
     try:
         validated = TypeAdapter(list[Part]).validate_python(json.loads(parts))
     except (ValueError, ValidationError):
@@ -194,15 +199,15 @@ async def upload_document(
     ).scalar_one()
     if held >= MAX_DOCUMENTS:
         raise APIError(409, "pack_full", f"A pack can hold up to {MAX_DOCUMENTS} files")
-    path = document_path(request.app.state.settings.cda_upload_dir, pid, digest)
+    path = document_path(request.app.state.settings.cda_upload_dir, pid, digest, office or ".pdf")
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists():
         path.write_bytes(content)
     try:
-        did = await ingest_pdf(conn, pack_id=pid, kind=kind, path=path)
+        did = await ingest_document(conn, pack_id=pid, kind=kind, path=path)
         await replace_parts(conn, did, validated)
     except ParseError as exc:
-        raise APIError(422, exc.code, "PDF could not be parsed") from None
+        raise APIError(422, exc.code, "File could not be parsed") from None
     except ValueError:
         raise APIError(422, "invalid_parts", "Invalid document parts") from None
     except IntegrityError:
@@ -246,14 +251,17 @@ async def get_file(
     pid: UUID, did: UUID, request: Request, conn: Conn, actor: Actor
 ) -> FileResponse:
     row = await document(conn, actor, pid, did)
-    path = document_path(request.app.state.settings.cda_upload_dir, pid, row["sha256"])
+    office = office_suffix(row["filename"])
+    path = document_path(
+        request.app.state.settings.cda_upload_dir, pid, row["sha256"], office or ".pdf"
+    )
     if not path.is_file():
         raise APIError(404, "not_found", "File not found")
     return FileResponse(
         path,
-        media_type="application/pdf",
+        media_type=OFFICE_TYPES[office] if office else "application/pdf",
         filename=row["filename"],
-        content_disposition_type="inline",
+        content_disposition_type="attachment" if office else "inline",
     )
 
 

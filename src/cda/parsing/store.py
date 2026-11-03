@@ -10,13 +10,26 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from cda.db.enums import DocumentKind
 from cda.db.models import Document, Unit
-from cda.parsing.pdf import parse_pdf
+from cda.parsing.office import parse_docx, parse_xlsx
+from cda.parsing.pdf import ParsedDocument, parse_pdf
+
+OFFICE_SUFFIXES = (".docx", ".xlsx")
 
 
-async def ingest_pdf(
+def parse_document(path: str | Path) -> ParsedDocument:
+    """PDF unless the stored file has an Office suffix (X1)."""
+    suffix = Path(path).suffix.lower()
+    if suffix == ".docx":
+        return parse_docx(path)
+    if suffix == ".xlsx":
+        return parse_xlsx(path)
+    return parse_pdf(path)
+
+
+async def ingest_document(
     conn: AsyncConnection, *, pack_id: UUID, kind: DocumentKind, path: str | Path
 ) -> UUID:
-    parsed = await asyncio.to_thread(parse_pdf, path)
+    parsed = await asyncio.to_thread(parse_document, path)
     async with conn.begin_nested():
         document_id = (
             await conn.execute(
@@ -51,3 +64,6 @@ async def ingest_pdf(
         if rows:
             await conn.execute(insert(Unit), rows)
     return document_id
+
+
+ingest_pdf = ingest_document

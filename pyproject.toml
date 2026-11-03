@@ -29,6 +29,8 @@ dependencies = [
     "psycopg[binary]",
     "reportlab>=5.1.0",
     "mcp<2",
+    "python-docx>=1.2.0",
+    "openpyxl>=3.1.5",
 ]
 
 [project.scripts]

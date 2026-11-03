@@ -25,3 +25,5 @@ SMOKE_URL=http://127.0.0.1:3101 npx playwright test -c playwright.smoke.config.t
 ```
 
 `smoke/new-check.spec.ts` also needs the worker (`python -m cda.runner.main`) on the same database. Run "fake model" with `CDA_FAKE_LLM=1` on the API and worker (no OpenAI calls, D83), and "rejected key" with the fake off and `OPENAI_API_KEY` set to an invalid value such as `sk-invalid-smoke-test`.
+
+`smoke/office.spec.ts` (X1) uploads a Word and an Excel file next to a Wattlebrook PDF and runs a fake-model check; set `SMOKE_OFFICE_DIR` to a folder with `wattlebrook-transition-plan.docx` and `wattlebrook-emissions-data.xlsx` (any small files with those names), otherwise it is skipped.

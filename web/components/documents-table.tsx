@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { ApiError, api, type PackDetail, type PackDocument } from "@/lib/api";
-import { INDEX_STATUS, KIND } from "@/lib/format";
+import { INDEX_STATUS, KIND, isPdf, pagesLabel } from "@/lib/format";
 import { type PageRange, rangeError, withSustainabilityPart } from "@/lib/upload";
 
 export function DocumentsTable({
@@ -44,7 +44,7 @@ export function DocumentsTable({
               <tr key={doc.id} data-testid="document-row" className="border-t border-slate-200 align-top">
                 <td className="px-4 py-2 font-medium">{doc.filename}</td>
                 <td className="px-4 py-2">{KIND[doc.kind]}</td>
-                <td className="px-4 py-2">{doc.page_count}</td>
+                <td className="px-4 py-2">{pagesLabel(doc.filename, doc.page_count)}</td>
                 <td className="px-4 py-2">
                   {editing === doc.id ? (
                     <PartsEditor
@@ -71,7 +71,7 @@ export function DocumentsTable({
                 <td className="px-4 py-2">{doc.index_status === "done" ? doc.unit_count : "—"}</td>
                 {canEdit && (
                   <td className="space-x-3 whitespace-nowrap px-4 py-2 text-right">
-                    {doc.kind !== "sustainability" && editing !== doc.id && (
+                    {doc.kind !== "sustainability" && isPdf(doc.filename) && editing !== doc.id && (
                       <button className="underline" onClick={() => setEditing(doc.id)}>
                         Edit pages
                       </button>
