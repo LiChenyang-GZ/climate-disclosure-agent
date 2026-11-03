@@ -89,6 +89,16 @@ export interface Part {
   label?: string | null;
 }
 
+/** Where an imported file came from (X2); null for uploads. */
+export interface DocumentSource {
+  provider: "microsoft";
+  drive_id: string;
+  item_id: string;
+  path: string;
+  etag: string | null;
+  web_url: string | null;
+}
+
 export interface PackDocument {
   id: string;
   filename: string;
@@ -97,6 +107,7 @@ export interface PackDocument {
   unit_count: number;
   index_status: IndexStatus;
   parts: Part[];
+  source?: DocumentSource | null;
 }
 
 export interface PackDetail {
@@ -146,4 +157,79 @@ export interface FindingRow {
   title: string;
   status: FindingStatus;
   needs_review_reason: string | null;
+}
+
+// OneDrive / SharePoint (X2, D84).
+export interface MicrosoftStatus {
+  configured: boolean;
+  connected: boolean;
+  account: string | null;
+}
+
+export interface DeviceCode {
+  user_code: string;
+  verification_uri: string;
+  expires_in: number;
+  interval: number;
+}
+
+export type PollState = "pending" | "connected" | "cancelled" | "expired";
+
+export interface BrowseSite {
+  id: string;
+  name: string;
+  kind: "onedrive" | "sharepoint";
+}
+
+export interface BrowseDrive {
+  id: string;
+  name: string;
+}
+
+export interface BrowseFolder {
+  drive_id: string;
+  item_id: string;
+  name: string;
+}
+
+export interface BrowseFile extends BrowseFolder {
+  path: string;
+  size: number | null;
+}
+
+export interface BrowseListing {
+  sites: BrowseSite[];
+  drives: BrowseDrive[];
+  folders: BrowseFolder[];
+  files: BrowseFile[];
+}
+
+export interface ImportResult {
+  item_id: string;
+  status: "imported" | "duplicate" | "denied" | "failed" | "rejected";
+  error?: string;
+  message?: string;
+  document?: PackDocument;
+}
+
+export interface SyncEntry {
+  document_id: string;
+  filename: string;
+  path: string;
+  error?: string;
+  message?: string;
+}
+
+export interface SyncStatus {
+  changed: SyncEntry[];
+  removed: SyncEntry[];
+  failed: SyncEntry[];
+  unchanged: number;
+}
+
+export interface SyncResult {
+  document_id: string;
+  status: "updated" | "unchanged" | "removed" | "denied" | "failed" | "rejected" | "duplicate";
+  error?: string;
+  message?: string;
 }

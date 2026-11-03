@@ -163,6 +163,9 @@ class Document(Base):
     page_count: Mapped[int] = mapped_column(Integer(), nullable=False)
     parser_version: Mapped[str] = mapped_column(Text(), nullable=False)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # D84: origin of an imported file ({provider, drive_id, item_id, path, etag, web_url});
+    # null for uploads.
+    source: Mapped[dict[str, Any] | None] = mapped_column(JSONB(), nullable=True)
 
     __table_args__ = (
         CheckConstraint(_allowed_values("kind", DOCUMENT_KINDS), name="ck_documents_kind"),

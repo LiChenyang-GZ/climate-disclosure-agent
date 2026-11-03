@@ -1,0 +1,19 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#drives",
+  "value": [
+    {
+      "id": "b!sustainability-documents",
+      "name": "Documents",
+      "driveType": "documentLibrary",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Sustainability/Shared%20Documents",
+      "createdDateTime": "2025-02-01T00:00:00Z"
+    },
+    {
+      "id": "b!sustainability-archive",
+      "name": "Archive",
+      "driveType": "documentLibrary",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Sustainability/Archive",
+      "createdDateTime": "2025-02-01T00:00:00Z"
+    }
+  ]
+}

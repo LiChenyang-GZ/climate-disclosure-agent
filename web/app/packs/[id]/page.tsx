@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { DocumentsTable } from "@/components/documents-table";
+import { MicrosoftPanel } from "@/components/microsoft-panel";
 import { NewCheckDialog } from "@/components/new-check-dialog";
 import { UploadPanel } from "@/components/upload-panel";
 import { useUser } from "@/components/user-context";
@@ -173,6 +174,7 @@ export default function PackPage() {
 
       <DocumentsTable pack={data} canEdit={isLead} onChanged={reload} />
       {isLead && <UploadPanel pack={data} onUploaded={reload} />}
+      {isLead && <MicrosoftPanel pack={data} onChanged={reload} />}
     </section>
   );
 }

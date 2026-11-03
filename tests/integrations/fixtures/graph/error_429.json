@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "activityLimitReached",
+    "message": "The application or user has been throttled.",
+    "innerError": {
+      "date": "2026-11-03T01:02:03",
+      "request-id": "00000000-0000-0000-0000-000000000000"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#drives('b!sustainability-documents')/items('01DRAFTSFOLDER')/children",
+  "value": [
+    {
+      "id": "01EMISSIONSXLSX",
+      "name": "Emissions data.XLSX",
+      "eTag": "\"{A0000004-0000-0000-0000-000000000004},1\"",
+      "cTag": "\"c:{A0000004-0000-0000-0000-000000000004},1\"",
+      "createdDateTime": "2026-10-01T00:00:00Z",
+      "lastModifiedDateTime": "2026-10-20T00:00:00Z",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Sustainability/_layouts/15/Doc.aspx?sourcedoc=%7BA0000004%7D",
+      "size": 8192,
+      "parentReference": {
+        "driveType": "documentLibrary",
+        "driveId": "b!sustainability-documents",
+        "id": "01DRAFTSFOLDER",
+        "name": "Drafts",
+        "path": "/drives/b!sustainability-documents/root:/Drafts",
+        "siteId": "11111111-1111-4111-8111-111111111111"
+      },
+      "file": {
+        "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "hashes": {
+          "quickXorHash": "AAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      }
+    },
+    {
+      "id": "01TRANSITIONDOCX",
+      "name": "transition-plan.docx",
+      "eTag": "\"{A0000005-0000-0000-0000-000000000005},1\"",
+      "cTag": "\"c:{A0000005-0000-0000-0000-000000000005},1\"",
+      "createdDateTime": "2026-10-01T00:00:00Z",
+      "lastModifiedDateTime": "2026-10-20T00:00:00Z",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Sustainability/_layouts/15/Doc.aspx?sourcedoc=%7BA0000005%7D",
+      "size": 8192,
+      "parentReference": {
+        "driveType": "documentLibrary",
+        "driveId": "b!sustainability-documents",
+        "id": "01DRAFTSFOLDER",
+        "name": "Drafts",
+        "path": "/drives/b!sustainability-documents/root:/Drafts",
+        "siteId": "11111111-1111-4111-8111-111111111111"
+      },
+      "file": {
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "hashes": {
+          "quickXorHash": "AAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      }
+    },
+    {
+      "id": "01NOTEBOOKONENOTE",
+      "name": "Team notebook",
+      "eTag": "\"{A0000006-0000-0000-0000-000000000006},1\"",
+      "lastModifiedDateTime": "2026-10-23T00:00:00Z",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Sustainability/Shared%20Documents/Drafts/Team%20notebook",
+      "size": 0,
+      "parentReference": {
+        "driveType": "documentLibrary",
+        "driveId": "b!sustainability-documents",
+        "id": "01DRAFTSFOLDER",
+        "name": "Drafts",
+        "path": "/drives/b!sustainability-documents/root:/Drafts",
+        "siteId": "11111111-1111-4111-8111-111111111111"
+      },
+      "package": {
+        "type": "oneNote"
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "token_type": "Bearer",
+  "scope": "Files.Read.All Sites.Read.All User.Read profile openid email",
+  "expires_in": 3599,
+  "ext_expires_in": 3599,
+  "access_token": "FAKE-ACCESS-TOKEN-2",
+  "refresh_token": "FAKE-REFRESH-TOKEN-2"
+}

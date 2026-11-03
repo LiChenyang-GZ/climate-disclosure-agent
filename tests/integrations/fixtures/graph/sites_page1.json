@@ -1,0 +1,13 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#sites",
+  "value": [
+    {
+      "id": "wattlebrook.sharepoint.com,11111111-1111-4111-8111-111111111111,22222222-2222-4222-8222-222222222222",
+      "name": "Sustainability",
+      "displayName": "Sustainability Reporting",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Sustainability",
+      "createdDateTime": "2025-02-01T00:00:00Z"
+    }
+  ],
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/sites?search=*&$skiptoken=FAKE-SKIP-1"
+}

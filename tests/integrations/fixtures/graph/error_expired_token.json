@@ -1,0 +1,10 @@
+{
+  "error": "expired_token",
+  "error_description": "AADSTS00000: Made-up description for expired_token.\r\nTrace ID: 00000000-0000-0000-0000-000000000000",
+  "error_codes": [
+    0
+  ],
+  "timestamp": "2026-11-03 01:02:03Z",
+  "trace_id": "00000000-0000-0000-0000-000000000000",
+  "correlation_id": "00000000-0000-0000-0000-000000000000"
+}

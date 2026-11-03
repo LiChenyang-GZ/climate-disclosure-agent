@@ -69,6 +69,14 @@ export function packDetail(overrides: Record<string, unknown> = {}) {
   };
 }
 
+/** Microsoft import is not set up unless a test says otherwise (X2). */
+export const MICROSOFT_OFF = { configured: false, connected: false, account: null };
+
+const DEFAULTS: Record<string, (user: string) => Handler> = {
+  "GET /me": (user) => () => ({ json: ME[user] }),
+  "GET /integrations/microsoft": () => () => ({ json: MICROSOFT_OFF }),
+};
+
 /**
  * Routes every /api/* call to `handlers` keyed by "METHOD /path". The current
  * demo user is read from the cda_user cookie, as the real proxy does.
@@ -82,8 +90,7 @@ export async function mockApi(page: Page, handlers: Record<string, Handler>) {
     calls.push(key);
     const cookies = await page.context().cookies();
     const user = cookies.find((c) => c.name === "cda_user")?.value ?? "sarah";
-    const handler =
-      handlers[key] ?? (key === "GET /me" ? () => ({ json: ME[user] }) : undefined);
+    const handler = handlers[key] ?? DEFAULTS[key]?.(user);
     if (!handler) {
       await route.fulfill({ status: 599, json: { error: "unmocked", message: key } });
       return;

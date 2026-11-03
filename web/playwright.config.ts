@@ -2,8 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 // The UI tests mock /api/* in the browser (D81). The production server still
 // needs an upstream for the proxy test, which starts its own stub on STUB_PORT.
-const PORT = 3100;
-const STUB_PORT = 3199;
+// Overridable so two worktrees can run Playwright at the same time.
+const PORT = Number(process.env.PW_PORT ?? 3100);
+const STUB_PORT = Number(process.env.PW_STUB_PORT ?? 3199);
 
 export default defineConfig({
   testDir: "./tests",

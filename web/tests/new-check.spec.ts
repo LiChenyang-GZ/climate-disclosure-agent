@@ -70,7 +70,7 @@ test.describe("New check button (PRD 6.3)", () => {
   });
 
   test("alex in the team can start a check", async ({ page, context }) => {
-    await context.addCookies([{ name: "cda_user", value: "alex", url: "http://127.0.0.1:3100" }]);
+    await context.addCookies([{ name: "cda_user", value: "alex", url: `http://127.0.0.1:${process.env.PW_PORT ?? 3100}` }]);
     await openPack(page);
     await expect(page.getByRole("button", { name: "Parse" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "New check" })).toBeEnabled();

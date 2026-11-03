@@ -149,29 +149,38 @@ async def get_pack(pid: UUID, request: Request, conn: Conn, actor: Actor) -> dic
     }
 
 
-@router.post("/packs/{pid}/documents", status_code=201)
-async def upload_document(
-    pid: UUID,
+def upload_limit(request: Request) -> int:
+    return int(request.app.state.settings.cda_max_upload_mb) * 1024 * 1024
+
+
+def check_file(content: bytes, filename: str | None, limit: int) -> str | None:
+    """Size and format checks shared by upload and import; returns the Office suffix."""
+    if len(content) > limit:
+        raise APIError(413, "upload_too_large", "Upload exceeds size limit")
+    office = office_suffix(filename)
+    if office is None and not content.startswith(b"%PDF-"):
+        raise APIError(415, "unsupported_format", "Upload a PDF, .docx or .xlsx file")
+    return office
+
+
+async def store_document(
     request: Request,
     conn: Conn,
     actor: Actor,
-    file: Annotated[UploadFile, File()],
-    kind: Annotated[DocumentKind, Form()],
-    parts: Annotated[str, Form()] = "[]",
-) -> dict[str, Any]:
-    await deps.visible_pack(conn, actor, pid)
-    lead(actor)
-    limit = request.app.state.settings.cda_max_upload_mb * 1024 * 1024
-    content = await file.read(limit + 1)
-    if len(content) > limit:
-        raise APIError(413, "upload_too_large", "Upload exceeds size limit")
-    office = office_suffix(file.filename)
-    if office is None and not content.startswith(b"%PDF-"):
-        raise APIError(415, "unsupported_format", "Upload a PDF, .docx or .xlsx file")
-    try:
-        validated = TypeAdapter(list[Part]).validate_python(json.loads(parts))
-    except (ValueError, ValidationError):
-        raise APIError(422, "invalid_parts", "Invalid document parts") from None
+    pid: UUID,
+    *,
+    content: bytes,
+    filename: str | None,
+    kind: DocumentKind,
+    parts: list[Part],
+    source: dict[str, Any] | None = None,
+    action: str = "upload_document",
+) -> UUID:
+    """Add one file to a pack: the single path for uploads and imports (X2, D84).
+
+    The caller has checked visibility and the lead role. Raises `APIError` for every refusal.
+    """
+    office = check_file(content, filename, upload_limit(request))
     digest = hashlib.sha256(content).hexdigest()
     # Serialise uploads against duplicate digest and soft deletion in this pack.
     await conn.execute(
@@ -205,7 +214,7 @@ async def upload_document(
         path.write_bytes(content)
     try:
         did = await ingest_document(conn, pack_id=pid, kind=kind, path=path)
-        await replace_parts(conn, did, validated)
+        await replace_parts(conn, did, parts)
     except ParseError as exc:
         raise APIError(422, exc.code, "File could not be parsed") from None
     except ValueError:
@@ -213,9 +222,43 @@ async def upload_document(
     except IntegrityError:
         raise APIError(409, "duplicate_document", "Document already exists in pack") from None
     await conn.execute(
-        update(Document).where(Document.id == did).values(filename=safe_filename(file.filename))
+        update(Document)
+        .where(Document.id == did)
+        .values(filename=safe_filename(filename), source=source)
     )
-    await audit(conn, actor, "upload_document", did, pack_id=str(pid))
+    await audit(conn, actor, action, did, pack_id=str(pid))
+    return did
+
+
+@router.post("/packs/{pid}/documents", status_code=201)
+async def upload_document(
+    pid: UUID,
+    request: Request,
+    conn: Conn,
+    actor: Actor,
+    file: Annotated[UploadFile, File()],
+    kind: Annotated[DocumentKind, Form()],
+    parts: Annotated[str, Form()] = "[]",
+) -> dict[str, Any]:
+    await deps.visible_pack(conn, actor, pid)
+    lead(actor)
+    limit = upload_limit(request)
+    content = await file.read(limit + 1)
+    check_file(content, file.filename, limit)
+    try:
+        validated = TypeAdapter(list[Part]).validate_python(json.loads(parts))
+    except (ValueError, ValidationError):
+        raise APIError(422, "invalid_parts", "Invalid document parts") from None
+    did = await store_document(
+        request,
+        conn,
+        actor,
+        pid,
+        content=content,
+        filename=file.filename,
+        kind=kind,
+        parts=validated,
+    )
     return await document_info(request, conn, await document(conn, actor, pid, did), actor)
 
 
