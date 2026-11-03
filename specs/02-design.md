@@ -2,7 +2,7 @@
 
 This is the source of truth for **how** the system is built. `01-requirements.md` says what it does; `03-tasks.md` says in what order it is built. If code and this file disagree, raise it in the PR — do not silently pick one.
 
-Decisions are numbered **D1–D82**. Task specs cite them by number (e.g. "follow D35, D58").
+Decisions are numbered **D1–D83**. Task specs cite them by number (e.g. "follow D35, D58").
 
 ## 1. Tech stack
 
@@ -25,7 +25,7 @@ Decisions are numbered **D1–D82**. Task specs cite them by number (e.g. "follo
 | Retries | `tenacity` | D20 |
 | Synthetic PDFs | `reportlab` | T15 only |
 | Containers | Docker Compose: `db`, `api`, `worker`, optional `langfuse` | local only, no cloud |
-| UI (phase 2) | Next.js (App Router) + TypeScript + Tailwind CSS, npm; Playwright (Chromium) | in `web/`; D80–D82 |
+| UI (phase 2) | Next.js (App Router) + TypeScript + Tailwind CSS, npm; Playwright (Chromium) | in `web/`; D80–D83 |
 
 Exact versions: latest stable at the time of T00, pinned in `uv.lock`. Do not add a dependency that is not in this table without saying why in the PR.
 
@@ -201,6 +201,7 @@ LC details (T17): one call per check with the whole pack (paragraph and table-ro
 - All data is fetched in client components from `/api/...`; no server-side data fetching, so Playwright can mock the API at the browser boundary (D81).
 - Permissions stay in the API. The UI hides controls the current user cannot use (e.g. New pack for alex) but never relies on that; a 404 from the API on a page the new user cannot see sends them to `/` with "You don't have access to that page as alex." (PRD 6.1).
 - Packs belong to a team (§4), so "team members" in the PRD are chosen by picking a team; the UI shows the team's members. Editing team membership is out of scope for the UI (D82).
+- New check (U3): a pack that is Parsed with issues can be checked; documents whose index failed are skipped, stored on the run (`runs.skipped_documents`) and excluded by the tools, and the progress page lists them. A run may cover a subset of checks (`runs.check_ids`). `POST /runs` refuses a second active run on the pack (409 `run_active`) and, unless the fake model is on, a missing API key (409 `llm_key_missing`). `CDA_FAKE_LLM=1` makes the worker use a scripted fake model, for tests and local smoke only (D83).
 
 ## 12. MCP server (T22)
 Stdio, local only. Calls the same Python functions as the API, including permission functions (D51). Tools: `list_packs`, `get_run`, `get_findings`, `search_pack`, `start_check`. No review through MCP.
@@ -309,3 +310,4 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 80 | The browser talks only to Next.js; a catch-all route handler proxies `/api/*` to FastAPI and sets `X-Demo-User` from a cookie. `EventSource` cannot send headers, and this keeps the API unchanged and needs no CORS |
 | 81 | UI data is fetched client-side from `/api/*`. Playwright tests for the PRD 9.1 states mock `/api/*` with `page.route` and run in CI with no backend; one smoke test against the real compose stack runs locally only |
 | 82 | Pack "members" are the pack's team (packs.team_id); the New pack dialog picks one of the lead's teams and shows its members. No UI for editing team membership |
+| 83 | Parsed with issues can start a check: failed documents are skipped, stored on the run and excluded by the tools (PRD 6.3; "say what could not be read"). Runs can cover a subset of checks. One active run per pack via the API. `CDA_FAKE_LLM` worker switch, off by default, for tests and smoke without OpenAI credits (Christy, 3 Nov) |
