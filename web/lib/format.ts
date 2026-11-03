@@ -17,7 +17,7 @@ const SUMMARY: [FindingStatus, string][] = [
   ["error", "error"],
 ];
 
-const RUN_STATUS: Record<RunStatus, string> = {
+export const RUN_STATUS: Record<RunStatus, string> = {
   queued: "Queued",
   running: "Running",
   waiting_review: "Awaiting review",
@@ -67,4 +67,33 @@ export function guessKind(filename: string): DocumentKind {
   if (/sustainab|climate|esg/.test(name)) return "sustainability";
   if (/annual/.test(name)) return "annual";
   return "other";
+}
+
+export const FINDING_STATUS: Record<FindingStatus, string> = {
+  evidence_found: "Evidence found",
+  partial_evidence: "Partial evidence",
+  no_evidence_found: "No evidence found",
+  inconsistent: "Inconsistent",
+  needs_review: "Needs review",
+  not_checked: "Not checked",
+  error: "Error",
+};
+
+export const METHOD: Record<"A" | "B" | "C", string> = {
+  A: "Agentic search",
+  B: "Classic RAG",
+  C: "Agentic + semantic",
+};
+
+export function usd(value: number | string): string {
+  return `$${Number(value).toFixed(2)}`;
+}
+
+/** "4:05" or "1:02:03" from milliseconds. */
+export function elapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = String(total % 60).padStart(2, "0");
+  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 }

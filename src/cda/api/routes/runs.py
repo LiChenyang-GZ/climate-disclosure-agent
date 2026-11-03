@@ -25,12 +25,19 @@ async def create_run(
     actor: Actor,
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> dict[str, Any]:
+    if not request.app.state.settings.llm_ready:
+        raise APIError(409, "llm_key_missing", "OpenAI API key isn't set")
     row, created = await service.create_run(
         conn, actor, body, idempotency_key, request.app.state.index_state
     )
     if not created:
         response.status_code = 200
     return row
+
+
+@router.get("/run-options")
+async def run_options(actor: Actor) -> dict[str, Any]:
+    return service.run_options()
 
 
 @router.get("/runs/{rid}")

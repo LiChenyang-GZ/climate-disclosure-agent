@@ -110,3 +110,40 @@ export interface PackDetail {
   active_run_id: string | null;
   documents: PackDocument[];
 }
+
+export type Method = "A" | "B" | "C";
+
+export interface RunOptions {
+  checks: { id: string; title: string }[];
+  models: { key: string; model: string }[];
+  methods: Method[];
+  estimate_per_check_usd: Record<Method, Record<string, [number, number]>>;
+  max_budget_usd: number;
+}
+
+export interface RunDetail {
+  id: string;
+  pack_id: string;
+  method: Method | "LC";
+  model_key: string;
+  status: RunStatus;
+  budget_usd: string;
+  spent_usd: string;
+  tokens_in: number;
+  tokens_out: number;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+  error: string | null;
+  error_message: string | null;
+  check_ids: string[] | null;
+  skipped_documents: { id: string; filename: string }[];
+}
+
+export interface FindingRow {
+  id: string | null;
+  check_id: string;
+  title: string;
+  status: FindingStatus;
+  needs_review_reason: string | null;
+}

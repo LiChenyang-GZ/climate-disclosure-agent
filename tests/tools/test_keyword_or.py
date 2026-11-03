@@ -237,7 +237,12 @@ async def test_sql_uses_bound_plain_lexemes(monkeypatch):
         statements.append(stmt)
         return SimpleNamespace(mappings=list)
 
-    ctx = SimpleNamespace(conn=SimpleNamespace(execute=execute), pack_id=uuid4(), user_id=uuid4())
+    ctx = SimpleNamespace(
+        conn=SimpleNamespace(execute=execute),
+        pack_id=uuid4(),
+        user_id=uuid4(),
+        excluded_documents=frozenset(),
+    )
     raw = "!climate:* 'emissions' & risk"
     await keyword_search(ctx, SearchArgs(query=raw))
     compiled = statements[0].compile(dialect=postgresql.dialect())

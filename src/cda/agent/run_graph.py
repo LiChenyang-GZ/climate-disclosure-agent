@@ -152,7 +152,16 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
             stored = set(
                 (await conn.scalars(select(Finding.check_id).where(Finding.run_id == run_id))).all()
             )
-        return {"check_ids": [c.id for c in cs.checks if c.id not in stored]}
+            selected = (
+                await conn.execute(select(Run.check_ids).where(Run.id == run_id))
+            ).scalar_one()
+        return {
+            "check_ids": [
+                c.id
+                for c in cs.checks
+                if c.id not in stored and (selected is None or c.id in selected)
+            ]
+        }
 
     async def check_worker(state: RunState) -> RunState:
         nonlocal lc_pack, lc_pack_loaded
@@ -205,6 +214,7 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                         token_cap=deps.token_cap,
                         max_output_tokens=deps.max_output_tokens,
                         tool_timeout_s=deps.tool_timeout_s,
+                        excluded_documents=frozenset(UUID(d["id"]) for d in r.skipped_documents),
                     )
                     # T11 state contains a live connection. Do not inherit the outer
                     # graph's checkpoint context into that ephemeral worker graph.
@@ -214,7 +224,12 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                             if not lc_pack_loaded:
                                 lc_pack = await build_pack(
                                     ToolContext(
-                                        conn, r.created_by, r.pack_id, None, deps.tool_timeout_s
+                                        conn,
+                                        r.created_by,
+                                        r.pack_id,
+                                        None,
+                                        deps.tool_timeout_s,
+                                        excluded_documents=worker_deps.excluded_documents,
                                     ),
                                     deps.lc_scope,
                                 )

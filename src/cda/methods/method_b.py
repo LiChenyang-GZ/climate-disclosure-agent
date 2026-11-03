@@ -21,7 +21,14 @@ async def run_method_b(
     top_k: int = 10,
     min_vector_score: float | None = None,
 ) -> WorkerResult:
-    ctx = ToolContext(deps.conn, deps.user_id, deps.pack_id, deps.embedder, deps.tool_timeout_s)
+    ctx = ToolContext(
+        deps.conn,
+        deps.user_id,
+        deps.pack_id,
+        deps.embedder,
+        deps.tool_timeout_s,
+        excluded_documents=deps.excluded_documents,
+    )
     state = WorkerState(ctx)
 
     def finish(status: str, reason: str | None = None) -> WorkerResult:

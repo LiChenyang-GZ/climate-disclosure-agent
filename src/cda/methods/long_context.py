@@ -108,7 +108,14 @@ async def run_long_context(
     max_prompt_tokens: int = 200_000,
 ) -> WorkerResult:
     state = WorkerState(
-        ToolContext(deps.conn, deps.user_id, deps.pack_id, None, deps.tool_timeout_s)
+        ToolContext(
+            deps.conn,
+            deps.user_id,
+            deps.pack_id,
+            None,
+            deps.tool_timeout_s,
+            excluded_documents=deps.excluded_documents,
+        )
     )
 
     def finish(status: str, reason: str | None = None) -> WorkerResult:

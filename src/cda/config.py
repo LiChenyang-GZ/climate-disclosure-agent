@@ -2,7 +2,7 @@ import os
 import socket
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,5 +17,16 @@ class Settings(BaseSettings):
     heartbeat_seconds: int = 30
     poll_seconds: float = 5.0
     notify_channel: str = "cda_runs"
+
+    # Only its presence is checked; the OpenAI client reads the key itself.
+    openai_api_key: SecretStr | None = None
+    # D83: scripted fake model for tests and local smoke runs, never for real checks.
+    cda_fake_llm: bool = False
+
+    @property
+    def llm_ready(self) -> bool:
+        return self.cda_fake_llm or bool(
+            self.openai_api_key and self.openai_api_key.get_secret_value().strip()
+        )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")

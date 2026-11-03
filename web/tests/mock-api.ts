@@ -1,6 +1,14 @@
 import type { Page, Route } from "@playwright/test";
 
-export type Reply = { status?: number; json?: unknown; delay?: Promise<void>; abort?: boolean };
+export type Reply = {
+  status?: number;
+  json?: unknown;
+  /** Raw body, e.g. a text/event-stream for SSE. */
+  body?: string;
+  contentType?: string;
+  delay?: Promise<void>;
+  abort?: boolean;
+};
 export type Handler = (user: string, route: Route) => Reply | Promise<Reply>;
 
 export const ME: Record<string, unknown> = {
@@ -86,7 +94,99 @@ export async function mockApi(page: Page, handlers: Record<string, Handler>) {
       await route.abort("failed");
       return;
     }
+    if (reply.body !== undefined) {
+      await route.fulfill({
+        status: reply.status ?? 200,
+        body: reply.body,
+        contentType: reply.contentType ?? "text/event-stream",
+      });
+      return;
+    }
     await route.fulfill({ status: reply.status ?? 200, json: reply.json ?? {} });
   });
   return calls;
+}
+
+export const CHECKS = [
+  ["G1", "Board oversight of climate-related risks and opportunities"],
+  ["G2", "Management's role in climate-related risks and opportunities"],
+  ["S1", "Climate-related risks and opportunities and time horizons"],
+  ["S2", "Effects on the business model and value chain"],
+  ["S3", "Strategy and decision-making, including any transition plan"],
+  ["S4", "Current and anticipated financial effects"],
+  ["S5", "Scenario analysis with a 1.5°C and a ≥2.5°C scenario"],
+  ["R1", "Risk management process and integration"],
+  ["M1", "Scope 1, Scope 2 and Scope 3 greenhouse gas emissions"],
+  ["M2", "Cross-industry metrics"],
+  ["M3", "Climate targets, including regulatory targets, and progress"],
+  ["A1", "No impermissible disclaimer"],
+  ["A2", "Weather-related financial effects in the annual report reflected as climate risks"],
+  ["A3", "Cross-references specify document and section and point to entity-published documents"],
+  ["A4", "Mandatory disclosures clearly identifiable"],
+].map(([id, title]) => ({ id, title }));
+
+export const RUN_OPTIONS = {
+  checks: CHECKS,
+  models: [
+    { key: "luna", model: "gpt-6-luna" },
+    { key: "sol", model: "gpt-6.1-sol" },
+  ],
+  methods: ["A", "B", "C"],
+  estimate_per_check_usd: {
+    A: { luna: [0.0048, 0.035], sol: [0.095, 0.7] },
+    B: { luna: [0.0012, 0.003], sol: [0.024, 0.06] },
+    C: { luna: [0.0048, 0.035], sol: [0.095, 0.7] },
+  },
+  max_budget_usd: 10,
+};
+
+export function runDetail(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "run-1",
+    pack_id: "pack-1",
+    method: "A",
+    model_key: "luna",
+    status: "running",
+    budget_usd: "2.000000",
+    spent_usd: "0.120000",
+    tokens_in: 40000,
+    tokens_out: 2000,
+    created_at: "2026-11-03T00:00:00Z",
+    started_at: new Date(Date.now() - 65_000).toISOString(),
+    finished_at: null,
+    error: null,
+    error_message: null,
+    check_ids: null,
+    skipped_documents: [],
+    ...overrides,
+  };
+}
+
+/** GET /runs/{id}/findings rows: unfinished checks have id null and status not_checked. */
+export function findingRows(done: Record<string, string | [string, string]> = {}) {
+  return CHECKS.map((c) => {
+    const value = done[c.id];
+    const [status, reason] = Array.isArray(value) ? value : [value, null];
+    return {
+      id: value ? `f-${c.id}` : null,
+      check_id: c.id,
+      title: c.title,
+      status: value ? status : "not_checked",
+      needs_review_reason: value ? reason : null,
+    };
+  });
+}
+
+/** An SSE body: [type, check_id, payload] per event, ids from 1. */
+export function sse(events: [string, string | null, Record<string, unknown>][], first = 1): string {
+  return events
+    .map(
+      ([type, checkId, payload], i) =>
+        `id: ${first + i}
+event: ${type}
+data: ${JSON.stringify({ ...payload, check_id: checkId })}
+
+`,
+    )
+    .join("");
 }

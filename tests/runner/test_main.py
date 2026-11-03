@@ -28,3 +28,19 @@ def test_main_signal_stop(monkeypatch, caplog):
     assert "worker started" in caplog.text
     assert "worker stopped" in caplog.text
     assert "postgresql://" not in caplog.text
+
+
+def test_build_run_deps_fake_llm(caplog):
+    from cda.llm.fake import DemoFakeLLM
+
+    with caplog.at_level(logging.WARNING):
+        deps = build_run_deps(
+            Settings(
+                _env_file=None,
+                database_url="postgresql+asyncpg://localhost/cda_test",
+                cda_fake_llm=True,
+            ),
+            InMemorySaver(),
+        )
+    assert isinstance(deps.llm, DemoFakeLLM)
+    assert "using fake LLM" in caplog.text

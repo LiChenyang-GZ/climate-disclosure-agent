@@ -306,7 +306,7 @@ async def test_sse_replay_and_live(api):
     await sink.emit(rid, None, "old", {})
     async with api[1].connect() as conn:
         last = (await conn.execute(select(func.max(RunEvent.id)))).scalar_one()
-    await sink.emit(rid, None, "progress", {"value": 1})
+    await sink.emit(rid, "G1", "progress", {"value": 1})
 
     async def emit():
         await asyncio.sleep(0.1)
@@ -319,6 +319,7 @@ async def test_sse_replay_and_live(api):
     await task
     assert "event: old" not in response.text
     assert response.text.index("event: progress") < response.text.index("event: run_final")
+    assert 'data: {"value": 1, "check_id": "G1"}' in response.text
 
 
 async def test_export_and_findings(api):

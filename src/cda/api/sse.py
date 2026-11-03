@@ -61,7 +61,10 @@ def event_response(
                     yield {
                         "id": str(cursor),
                         "event": row["type"],
-                        "data": json.dumps(row["payload"], ensure_ascii=False),
+                        # The check id lives in its own column; the UI needs it per row (U3).
+                        "data": json.dumps(
+                            {**row["payload"], "check_id": row["check_id"]}, ensure_ascii=False
+                        ),
                     }
                     if row["type"] in TERMINAL_EVENTS:
                         return

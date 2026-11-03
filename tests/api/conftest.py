@@ -25,7 +25,12 @@ async def api(pg_url, tmp_path):
     app = create_app(
         engine=engine,
         embedder=HashEmbedder(),
-        settings=Settings(cda_upload_dir=tmp_path, cda_max_upload_mb=1),
+        settings=Settings(
+            _env_file=None,
+            cda_upload_dir=tmp_path,
+            cda_max_upload_mb=1,
+            openai_api_key="sk-test",
+        ),
     )
     async with AsyncClient(
         transport=ASGITransport(app=app, raise_app_exceptions=False),
