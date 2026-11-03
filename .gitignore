@@ -17,3 +17,6 @@ data/reference/
 .uv-cache/
 
 evals/out/
+
+# Personal Claude Code overrides
+.claude/settings.local.json
