@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     # D83: scripted fake model for tests and local smoke runs, never for real checks.
     cda_fake_llm: bool = False
 
+    # D84: Microsoft Entra app (public client, device-code flow); no secret is needed.
+    cda_ms_client_id: str | None = None
+    cda_ms_tenant: str = "organizations"
+
     @property
     def llm_ready(self) -> bool:
         return self.cda_fake_llm or bool(

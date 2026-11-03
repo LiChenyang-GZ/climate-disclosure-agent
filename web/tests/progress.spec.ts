@@ -203,7 +203,7 @@ test.describe("Progress page (PRD 6.5, 9.1 #5)", () => {
   });
 
   test("alex outside the team is sent to Packs", async ({ page, context }) => {
-    await context.addCookies([{ name: "cda_user", value: "alex", url: "http://127.0.0.1:3100" }]);
+    await context.addCookies([{ name: "cda_user", value: "alex", url: `http://127.0.0.1:${process.env.PW_PORT ?? 3100}` }]);
     await mockApi(page, {
       "GET /runs/run-1": () => ({ status: 404, json: { error: "not_found", message: "Resource not found" } }),
       "GET /runs/run-1/findings": () => ({ status: 404, json: { error: "not_found", message: "Resource not found" } }),

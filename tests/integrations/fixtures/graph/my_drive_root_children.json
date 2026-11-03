@@ -1,0 +1,66 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('sarah')/drive/root/children",
+  "value": [
+    {
+      "id": "01ONEDRIVEFOLDER0001",
+      "name": "Board papers",
+      "eTag": "\"{F0000000-0000-0000-0000-00000000F01D},1\"",
+      "lastModifiedDateTime": "2026-09-01T00:00:00Z",
+      "webUrl": "https://wattlebrook-my.sharepoint.com/personal/sarah/Documents/Board%20papers",
+      "size": 0,
+      "parentReference": {
+        "driveType": "business",
+        "driveId": "b!onedrive-sarah",
+        "id": "01ONEDRIVEROOT",
+        "path": "/drive/root:"
+      },
+      "folder": {
+        "childCount": 3
+      }
+    },
+    {
+      "id": "01ONEDRIVEFILE00001",
+      "name": "Climate notes.docx",
+      "eTag": "\"{F0000002-0000-0000-0000-000000000002},1\"",
+      "cTag": "\"c:{F0000002-0000-0000-0000-000000000002},1\"",
+      "createdDateTime": "2026-10-01T00:00:00Z",
+      "lastModifiedDateTime": "2026-10-20T00:00:00Z",
+      "webUrl": "https://wattlebrook-my.sharepoint.com/personal/sarah/_layouts/15/Doc.aspx?sourcedoc=%7BF0000002%7D",
+      "size": 20480,
+      "parentReference": {
+        "driveType": "business",
+        "driveId": "b!onedrive-sarah",
+        "id": "01ONEDRIVEROOT",
+        "path": "/drive/root:"
+      },
+      "file": {
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "hashes": {
+          "quickXorHash": "AAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      }
+    },
+    {
+      "id": "01ONEDRIVEFILE00002",
+      "name": "Holiday photo.jpg",
+      "eTag": "\"{F0000003-0000-0000-0000-000000000003},1\"",
+      "cTag": "\"c:{F0000003-0000-0000-0000-000000000003},1\"",
+      "createdDateTime": "2026-10-01T00:00:00Z",
+      "lastModifiedDateTime": "2026-10-20T00:00:00Z",
+      "webUrl": "https://wattlebrook-my.sharepoint.com/personal/sarah/Documents/Holiday%20photo.jpg",
+      "size": 204800,
+      "parentReference": {
+        "driveType": "business",
+        "driveId": "b!onedrive-sarah",
+        "id": "01ONEDRIVEROOT",
+        "path": "/drive/root:"
+      },
+      "file": {
+        "mimeType": "image/jpeg",
+        "hashes": {
+          "quickXorHash": "AAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#sites",
+  "value": [
+    {
+      "id": "wattlebrook.sharepoint.com,33333333-3333-4333-8333-333333333333,44444444-4444-4444-8444-444444444444",
+      "name": "Finance",
+      "displayName": "Finance",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Finance",
+      "createdDateTime": "2025-03-01T00:00:00Z"
+    }
+  ]
+}

@@ -14,7 +14,7 @@ test.describe("Packs page (PRD 6.2, 9.1 #1)", () => {
     page,
     context,
   }) => {
-    await context.addCookies([{ name: "cda_user", value: "alex", url: "http://127.0.0.1:3100" }]);
+    await context.addCookies([{ name: "cda_user", value: "alex", url: `http://127.0.0.1:${process.env.PW_PORT ?? 3100}` }]);
     await mockApi(page, { "GET /packs": () => ({ json: [] }) });
     await page.goto("/");
     await expect(page.getByText("No packs assigned to you yet.")).toBeVisible();
@@ -113,7 +113,7 @@ test.describe("Packs page (PRD 6.2, 9.1 #1)", () => {
     await page.goto("/packs/p2");
     await expect(page.getByRole("heading", { name: "Harbour Bank" })).toBeVisible();
     await page.getByLabel("Demo user").selectOption("alex");
-    await expect(page).toHaveURL(/127\.0\.0\.1:3100\/$/);
+    await expect(page).toHaveURL(new RegExp(`127\\.0\\.0\\.1:${process.env.PW_PORT ?? 3100}/$`));
     await expect(page.getByText("You don't have access to that page as alex.")).toBeVisible();
   });
 });

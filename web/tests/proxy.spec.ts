@@ -3,7 +3,7 @@ import { createServer, type IncomingHttpHeaders } from "node:http";
 import { expect, test } from "@playwright/test";
 
 // The production server is started with CDA_API_URL pointing at this stub.
-const STUB_PORT = 3199;
+const STUB_PORT = Number(process.env.PW_STUB_PORT ?? 3199);
 
 // Both tests use the stub port, so they must not run at the same time.
 test.describe.configure({ mode: "serial" });

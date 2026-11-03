@@ -12,6 +12,7 @@ from cda.api.errors import install_errors
 from cda.api.service import IndexState
 from cda.config import Settings
 from cda.indexing.embed import BgeEmbedder, Embedder
+from cda.integrations.graph import MicrosoftState
 
 
 def create_app(
@@ -39,13 +40,16 @@ def create_app(
     app.state.indexing = app.state.index_state.indexing
     app.state.index_errors = app.state.index_state.index_errors
     app.state.document_states = app.state.index_state.document_states
+    # D84: Microsoft sign-in state per demo user, in memory only.
+    app.state.microsoft = MicrosoftState()
     install_errors(app)
-    from cda.api.routes import findings, me, packs, runs
+    from cda.api.routes import findings, integrations, me, packs, runs
 
     app.include_router(me.router)
     app.include_router(packs.router)
     app.include_router(runs.router)
     app.include_router(findings.router)
+    app.include_router(integrations.router)
 
     @app.get("/health")
     def health() -> dict[str, str]:

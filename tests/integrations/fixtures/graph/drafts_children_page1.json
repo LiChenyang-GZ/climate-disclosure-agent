@@ -1,0 +1,73 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#drives('b!sustainability-documents')/items('01DRAFTSFOLDER')/children",
+  "value": [
+    {
+      "id": "01SUBFOLDER0000001",
+      "name": "Old versions",
+      "eTag": "\"{F0000000-0000-0000-0000-00000000F01D},1\"",
+      "lastModifiedDateTime": "2026-09-01T00:00:00Z",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Sustainability/Shared%20Documents/Drafts/Old%20versions",
+      "size": 0,
+      "parentReference": {
+        "driveType": "documentLibrary",
+        "driveId": "b!sustainability-documents",
+        "id": "01DRAFTSFOLDER",
+        "name": "Drafts",
+        "path": "/drives/b!sustainability-documents/root:/Drafts",
+        "siteId": "11111111-1111-4111-8111-111111111111"
+      },
+      "folder": {
+        "childCount": 0
+      }
+    },
+    {
+      "id": "01CLIMATEREPORTPDF",
+      "name": "climate-report-2026.pdf",
+      "eTag": "\"{A0000002-0000-0000-0000-000000000002},1\"",
+      "cTag": "\"c:{A0000002-0000-0000-0000-000000000002},1\"",
+      "createdDateTime": "2026-10-01T00:00:00Z",
+      "lastModifiedDateTime": "2026-10-20T00:00:00Z",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Sustainability/Shared%20Documents/Drafts/climate-report-2026.pdf",
+      "size": 2048,
+      "parentReference": {
+        "driveType": "documentLibrary",
+        "driveId": "b!sustainability-documents",
+        "id": "01DRAFTSFOLDER",
+        "name": "Drafts",
+        "path": "/drives/b!sustainability-documents/root:/Drafts",
+        "siteId": "11111111-1111-4111-8111-111111111111"
+      },
+      "file": {
+        "mimeType": "application/pdf",
+        "hashes": {
+          "quickXorHash": "AAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      }
+    },
+    {
+      "id": "01BOARDDECKPPTX",
+      "name": "board-deck.pptx",
+      "eTag": "\"{A0000003-0000-0000-0000-000000000003},1\"",
+      "cTag": "\"c:{A0000003-0000-0000-0000-000000000003},1\"",
+      "createdDateTime": "2026-10-01T00:00:00Z",
+      "lastModifiedDateTime": "2026-10-20T00:00:00Z",
+      "webUrl": "https://wattlebrook.sharepoint.com/sites/Sustainability/_layouts/15/Doc.aspx?sourcedoc=%7BA0000003%7D",
+      "size": 4096,
+      "parentReference": {
+        "driveType": "documentLibrary",
+        "driveId": "b!sustainability-documents",
+        "id": "01DRAFTSFOLDER",
+        "name": "Drafts",
+        "path": "/drives/b!sustainability-documents/root:/Drafts",
+        "siteId": "11111111-1111-4111-8111-111111111111"
+      },
+      "file": {
+        "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "hashes": {
+          "quickXorHash": "AAAAAAAAAAAAAAAAAAAAAAAAAAA="
+        }
+      }
+    }
+  ],
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/drives/b!sustainability-documents/items/01DRAFTSFOLDER/children?$skiptoken=FAKE-SKIP-2"
+}

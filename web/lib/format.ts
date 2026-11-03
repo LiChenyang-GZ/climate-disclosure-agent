@@ -117,3 +117,9 @@ export function pagesLabel(filename: string, count: number): string {
   if (name.endsWith(".xlsx")) return `${count} sheet${count === 1 ? "" : "s"}`;
   return String(count);
 }
+
+/** Source column (X2): "SharePoint · /Drafts/report.pdf" for imported files, else "Upload". */
+export function sourceLabel(source: { provider: string; path: string } | null | undefined): string {
+  if (!source) return "Upload";
+  return `${source.provider === "microsoft" ? "SharePoint" : source.provider} · ${source.path}`;
+}

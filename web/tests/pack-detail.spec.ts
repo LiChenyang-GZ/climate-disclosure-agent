@@ -269,7 +269,7 @@ test.describe("Documents (PRD 6.3)", () => {
   });
 
   test("alex sees files and status but no upload, parse, edit or delete", async ({ page, context }) => {
-    await context.addCookies([{ name: "cda_user", value: "alex", url: "http://127.0.0.1:3100" }]);
+    await context.addCookies([{ name: "cda_user", value: "alex", url: `http://127.0.0.1:${process.env.PW_PORT ?? 3100}` }]);
     await openPack(page, { status: "uploaded", documents: [doc({ index_status: "pending" })] });
     await expect(page.getByTestId("document-row")).toContainText("Not parsed");
     await expect(page.getByTestId("pack-status")).toHaveText("Uploaded");
