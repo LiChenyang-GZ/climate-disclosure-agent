@@ -120,6 +120,20 @@ export interface PackDetail {
   limits: { max_upload_mb: number; max_documents: number };
   active_run_id: string | null;
   documents: PackDocument[];
+  salesforce_account: SalesforceAccount | null;
+}
+
+/** A Salesforce Account a pack is linked to (D85). */
+export interface SalesforceAccount {
+  id: string;
+  name: string;
+}
+
+/** GET /integrations/salesforce; secrets never leave the API. */
+export interface SalesforceStatus {
+  configured: boolean;
+  instance_url: string | null;
+  edition: string | null;
 }
 
 export type Method = "A" | "B" | "C";

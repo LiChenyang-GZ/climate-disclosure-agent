@@ -65,6 +65,7 @@ export function packDetail(overrides: Record<string, unknown> = {}) {
     active_run_id: null,
     documents: [doc()],
     latest_runs: [],
+    salesforce_account: null,
     ...overrides,
   };
 }
@@ -72,9 +73,13 @@ export function packDetail(overrides: Record<string, unknown> = {}) {
 /** Microsoft import is not set up unless a test says otherwise (X2). */
 export const MICROSOFT_OFF = { configured: false, connected: false, account: null };
 
+/** Salesforce is not connected unless a test says so (D85). */
+export const SF_OFF = { configured: false, instance_url: null, edition: null };
+
 const DEFAULTS: Record<string, (user: string) => Handler> = {
   "GET /me": (user) => () => ({ json: ME[user] }),
   "GET /integrations/microsoft": () => () => ({ json: MICROSOFT_OFF }),
+  "GET /integrations/salesforce": () => () => ({ json: SF_OFF }),
 };
 
 /**
