@@ -137,6 +137,8 @@ class Pack(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=sql_text("now()")
     )
+    # D85: the linked Salesforce Account, {"id": ..., "name": ...}.
+    salesforce_account: Mapped[dict[str, str] | None] = mapped_column(JSONB(), nullable=True)
 
     __table_args__ = (
         CheckConstraint("reporting_year BETWEEN 2000 AND 2100", name="ck_packs_reporting_year"),
@@ -576,4 +578,31 @@ class AuditLog(Base):
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=sql_text("now()")
+    )
+
+
+class SalesforceCase(Base):
+    """A Case created in Salesforce for a finding; one per finding keeps pushes idempotent."""
+
+    __tablename__ = "salesforce_cases"
+
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True),
+        nullable=False,
+        primary_key=True,
+        server_default=sql_text("gen_random_uuid()"),
+    )
+    finding_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), ForeignKey("findings.id", ondelete="CASCADE"), nullable=False
+    )
+    case_id: Mapped[str] = mapped_column(Text(), nullable=False)
+    # Filled after the Case is read back; NULL if that read failed.
+    case_number: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=sql_text("now()")
+    )
+
+    __table_args__ = (
+        CheckConstraint("char_length(case_id) > 0", name="ck_salesforce_cases_case_id"),
+        UniqueConstraint("finding_id", name="uq_salesforce_cases_finding_id"),
     )

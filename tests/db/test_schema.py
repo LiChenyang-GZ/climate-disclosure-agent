@@ -37,6 +37,7 @@ TABLES = {
     "reviews",
     "llm_calls",
     "audit_log",
+    "salesforce_cases",
 }
 
 

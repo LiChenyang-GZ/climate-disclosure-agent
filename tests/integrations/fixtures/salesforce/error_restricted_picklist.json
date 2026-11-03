@@ -1,0 +1,7 @@
+[
+  {
+    "message": "Origin: bad value for restricted picklist field: Climate Disclosure Agent",
+    "errorCode": "INVALID_OR_NULL_FOR_RESTRICTED_PICKLIST",
+    "fields": ["Origin"]
+  }
+]

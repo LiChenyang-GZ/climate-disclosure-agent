@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { DocumentsTable } from "@/components/documents-table";
 import { MicrosoftPanel } from "@/components/microsoft-panel";
 import { NewCheckDialog } from "@/components/new-check-dialog";
+import { SalesforceLink } from "@/components/salesforce-link";
 import { UploadPanel } from "@/components/upload-panel";
 import { useUser } from "@/components/user-context";
 import { api, type PackDetail } from "@/lib/api";
@@ -122,6 +123,8 @@ export default function PackPage() {
           </button>
         </div>
       </div>
+
+      <SalesforceLink pack={data} isLead={isLead} onChanged={reload} />
 
       {data.active_run_id && (
         <p role="status" className="rounded bg-sky-50 p-3 text-sm text-sky-900">

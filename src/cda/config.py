@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     # D84: Microsoft Entra app (public client, device-code flow); no secret is needed.
     cda_ms_client_id: str | None = None
     cda_ms_tenant: str = "organizations"
+    # D85: Salesforce connected app (client credentials flow). The settings page can
+    # replace these in API memory only; they are never stored or logged.
+    cda_sf_instance_url: str | None = None
+    cda_sf_client_id: str | None = None
+    cda_sf_client_secret: SecretStr | None = None
+    # Optional web origin (e.g. http://localhost:3101) that makes the report link in a
+    # Case absolute; without it the Case carries the path /runs/{id}/report.
+    cda_web_url: str | None = None
 
     @property
     def llm_ready(self) -> bool:

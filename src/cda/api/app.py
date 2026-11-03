@@ -4,6 +4,7 @@ import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -13,6 +14,7 @@ from cda.api.service import IndexState
 from cda.config import Settings
 from cda.indexing.embed import BgeEmbedder, Embedder
 from cda.integrations.graph import MicrosoftState
+from cda.integrations.salesforce import SalesforceConnection
 
 
 def create_app(
@@ -20,6 +22,7 @@ def create_app(
     embedder: Embedder | None = None,
     engine: AsyncEngine | None = None,
     settings: Settings | None = None,
+    salesforce_transport: httpx.AsyncBaseTransport | None = None,
 ) -> FastAPI:
     configured = settings or Settings()
     embeddings = embedder if embedder is not None else BgeEmbedder()
@@ -42,14 +45,19 @@ def create_app(
     app.state.document_states = app.state.index_state.document_states
     # D84: Microsoft sign-in state per demo user, in memory only.
     app.state.microsoft = MicrosoftState()
+    # D85: in-memory only; the settings page can replace the credentials.
+    app.state.salesforce = SalesforceConnection.from_settings(
+        configured, transport=salesforce_transport
+    )
     install_errors(app)
-    from cda.api.routes import findings, integrations, me, packs, runs
+    from cda.api.routes import findings, integrations, me, packs, runs, salesforce
 
     app.include_router(me.router)
     app.include_router(packs.router)
     app.include_router(runs.router)
     app.include_router(findings.router)
     app.include_router(integrations.router)
+    app.include_router(salesforce.router)
 
     @app.get("/health")
     def health() -> dict[str, str]:
