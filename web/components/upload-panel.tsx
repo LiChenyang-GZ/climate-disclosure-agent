@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 
 import type { DocumentKind, PackDetail } from "@/lib/api";
-import { KIND, guessKind } from "@/lib/format";
+import { KIND, accepted, guessKind, isPdf } from "@/lib/format";
 import {
   type PageRange,
   rangeError,
@@ -52,7 +52,7 @@ export function UploadPanel({ pack, onUploaded }: { pack: PackDetail; onUploaded
           state: "ready",
           progress: 0,
         };
-        if (!file.name.toLowerCase().endsWith(".pdf")) {
+        if (!accepted(file.name)) {
           return { ...item, state: "rejected", message: "Unsupported format" };
         }
         if (file.size > maxMb * 1024 * 1024) {
@@ -100,7 +100,9 @@ export function UploadPanel({ pack, onUploaded }: { pack: PackDetail; onUploaded
   }
 
   const ready = items.filter((i) => i.state === "ready");
-  const invalid = ready.some((i) => i.kind !== "sustainability" && rangeError(i.range) !== null);
+  const invalid = ready.some(
+    (i) => i.kind !== "sustainability" && isPdf(i.file.name) && rangeError(i.range) !== null,
+  );
 
   return (
     <section aria-label="Upload files" className="rounded border border-slate-200 bg-white p-4">
@@ -218,7 +220,7 @@ function UploadRow({
         {item.state === "uploading" && (
           <progress aria-label={`Uploading ${item.file.name}`} max={1} value={item.progress} />
         )}
-        {item.state === "reading" && <span className="text-slate-600">Reading PDF…</span>}
+        {item.state === "reading" && <span className="text-slate-600">Reading file…</span>}
         {bad && <span className="text-red-800">{item.message}</span>}
         {item.state === "failed" && (
           <button className="underline" disabled={busy} onClick={onRetry}>
@@ -231,7 +233,7 @@ function UploadRow({
           </button>
         )}
       </div>
-      {item.state === "ready" && item.kind !== "sustainability" && (
+      {item.state === "ready" && item.kind !== "sustainability" && isPdf(item.file.name) && (
         <div className="mt-2 flex flex-wrap items-center gap-2 text-slate-600">
           <span>Sustainability report inside this file, PDF pages</span>
           <input

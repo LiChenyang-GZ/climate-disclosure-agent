@@ -48,20 +48,20 @@ test.describe("Upload (PRD 6.3, 9.1 #2)", () => {
     await page
       .getByLabel("Choose files")
       .setInputFiles([
-        file("notes.docx"),
+        file("notes.doc"),
         file("readme.txt"),
         file("huge.pdf", Buffer.alloc(1024 * 1024 + 1)),
         file("annual-report.pdf"),
       ]);
     const items = page.getByTestId("upload-item");
-    await expect(items.filter({ hasText: "notes.docx" })).toContainText("Unsupported format");
+    await expect(items.filter({ hasText: "notes.doc" })).toContainText("Unsupported format");
     await expect(items.filter({ hasText: "readme.txt" })).toContainText("Unsupported format");
     await expect(items.filter({ hasText: "huge.pdf" })).toContainText("File too large (max 1 MB)");
     await page.getByRole("button", { name: "Upload 1 file" }).click();
     await expect(items.filter({ hasText: "annual-report.pdf" })).toHaveCount(0);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toContain('filename="annual-report.pdf"');
-    await expect(items.filter({ hasText: "notes.docx" })).toBeVisible();
+    await expect(items.filter({ hasText: "notes.doc" })).toBeVisible();
   });
 
   test("refuses files over the 20-file limit", async ({ page }) => {

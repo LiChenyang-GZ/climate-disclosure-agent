@@ -97,3 +97,23 @@ export function elapsed(ms: number): string {
   const s = String(total % 60).padStart(2, "0");
   return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 }
+
+/** Upload formats (PRD 6.3, X1). */
+export const ACCEPTED = [".pdf", ".docx", ".xlsx"];
+
+export function accepted(filename: string): boolean {
+  const name = filename.toLowerCase();
+  return ACCEPTED.some((ext) => name.endsWith(ext));
+}
+
+export function isPdf(filename: string): boolean {
+  return filename.toLowerCase().endsWith(".pdf");
+}
+
+/** Word files are located by section and Excel files by sheet, not by page (X1). */
+export function pagesLabel(filename: string, count: number): string {
+  const name = filename.toLowerCase();
+  if (name.endsWith(".docx")) return `${count} section${count === 1 ? "" : "s"}`;
+  if (name.endsWith(".xlsx")) return `${count} sheet${count === 1 ? "" : "s"}`;
+  return String(count);
+}
