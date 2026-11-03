@@ -24,7 +24,7 @@ from sqlalchemy import (
 from sqlalchemy import (
     text as sql_text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, TSVECTOR
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 
@@ -308,6 +308,11 @@ class Run(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    # D83: null means every check; skipped documents are [{id, filename}].
+    check_ids: Mapped[list[str] | None] = mapped_column(ARRAY(Text()), nullable=True)
+    skipped_documents: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB(), nullable=False, server_default=sql_text("'[]'::jsonb")
+    )
 
     __table_args__ = (
         CheckConstraint(_allowed_values("method", RUN_METHODS), name="ck_runs_method"),

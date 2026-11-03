@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { DocumentsTable } from "@/components/documents-table";
+import { NewCheckDialog } from "@/components/new-check-dialog";
 import { UploadPanel } from "@/components/upload-panel";
 import { useUser } from "@/components/user-context";
 import { api, type PackDetail } from "@/lib/api";
@@ -19,6 +21,7 @@ export default function PackPage() {
   const pack = useLoad<PackDetail>(`/packs/${id}`, handle);
   const [parseError, setParseError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [checkStep, setCheckStep] = useState<"closed" | "notice" | "dialog">("closed");
 
   // The API answers 404 for packs outside the user's teams (PRD 6.1).
   const denied = pack.state === "error" && pack.error.status === 404;
@@ -61,6 +64,15 @@ export default function PackPage() {
     (d) => d.kind === "sustainability" || d.parts.some((p) => p.kind === "sustainability"),
   );
   const failed = data.documents.filter((d) => d.index_status === "failed").length;
+  // PRD 6.3: anyone who can see the pack (sarah, or alex in its team) can start a check.
+  const checkable = data.status === "parsed" || data.status === "parsed_with_issues";
+  const checkBlocked = data.active_run_id
+    ? "A check is already running on this pack"
+    : !checkable
+      ? data.status === "parsing"
+        ? "Wait for parsing to finish"
+        : "Parse the pack first"
+      : null;
 
   async function parse() {
     setStarting(true);
@@ -99,9 +111,50 @@ export default function PackPage() {
               {parsing ? "Parsing…" : "Parse"}
             </button>
           )}
+          <button
+            onClick={() => setCheckStep(data.status === "parsed_with_issues" ? "notice" : "dialog")}
+            disabled={checkBlocked !== null}
+            title={checkBlocked ?? undefined}
+            className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            New check
+          </button>
         </div>
       </div>
 
+      {data.active_run_id && (
+        <p role="status" className="rounded bg-sky-50 p-3 text-sm text-sky-900">
+          A check is running on this pack.{" "}
+          <Link href={`/runs/${data.active_run_id}`} className="underline">
+            View progress
+          </Link>
+        </p>
+      )}
+      {checkStep === "notice" && (
+        <div
+          role="alertdialog"
+          aria-labelledby="skip-notice"
+          className="rounded border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"
+        >
+          <p id="skip-notice">
+            {failed} file{failed === 1 ? "" : "s"} couldn&apos;t be parsed and will be skipped.
+          </p>
+          <div className="mt-2 flex gap-3">
+            <button
+              className="rounded bg-amber-700 px-3 py-1 font-medium text-white"
+              onClick={() => setCheckStep("dialog")}
+            >
+              Continue
+            </button>
+            <button className="underline" onClick={() => setCheckStep("closed")}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+      {checkStep === "dialog" && (
+        <NewCheckDialog packId={data.id} onClose={() => setCheckStep("closed")} />
+      )}
       {parseError && (
         <p role="alert" className="rounded bg-red-50 p-2 text-sm text-red-900">
           {parseError}

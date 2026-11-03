@@ -32,7 +32,14 @@ async def run_single_call(
 ) -> WorkerResult:
     """Make one forced submission call and apply shared verification/status rules."""
     state = WorkerState(
-        ToolContext(deps.conn, deps.user_id, deps.pack_id, deps.embedder, deps.tool_timeout_s)
+        ToolContext(
+            deps.conn,
+            deps.user_id,
+            deps.pack_id,
+            deps.embedder,
+            deps.tool_timeout_s,
+            excluded_documents=deps.excluded_documents,
+        )
     )
 
     def finish(status: str, reason: str | None = None, *, high: bool | None = None) -> WorkerResult:

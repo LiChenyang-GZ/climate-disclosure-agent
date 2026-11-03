@@ -56,6 +56,7 @@ class WorkerDeps:
     token_cap: int = 300_000  # D79
     max_output_tokens: int = 2000
     tool_timeout_s: float = 10.0
+    excluded_documents: frozenset[UUID] = frozenset()  # D83
 
 
 class GraphState(TypedDict):
@@ -380,7 +381,14 @@ def build_graph(
 
 async def run_worker(deps: WorkerDeps, check: Check, check_set: CheckSet) -> WorkerResult:
     s = WorkerState(
-        ToolContext(deps.conn, deps.user_id, deps.pack_id, deps.embedder, deps.tool_timeout_s)
+        ToolContext(
+            deps.conn,
+            deps.user_id,
+            deps.pack_id,
+            deps.embedder,
+            deps.tool_timeout_s,
+            excluded_documents=deps.excluded_documents,
+        )
     )
     try:
         await build_graph(deps, check, check_set).ainvoke(

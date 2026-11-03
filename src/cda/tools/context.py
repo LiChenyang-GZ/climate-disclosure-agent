@@ -40,3 +40,5 @@ class ToolContext:
     embedder: Embedder | None = None
     timeout_s: float = 10.0
     coverage: Coverage = field(default_factory=Coverage)
+    # D83: documents a run skipped because their index failed.
+    excluded_documents: frozenset[UUID] = frozenset()

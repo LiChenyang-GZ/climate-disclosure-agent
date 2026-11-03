@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, insert, select, text
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -118,6 +118,33 @@ class RunInput(BaseModel):
     budget_usd: Decimal = Field(
         default=Decimal("2.0"), gt=0, le=10, decimal_places=6, allow_inf_nan=False
     )
+    # D83: a subset of the check set; None runs every check.
+    check_ids: list[str] | None = None
+
+    @field_validator("check_ids")
+    @classmethod
+    def known_checks(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        known = [c.id for c in default_check_set().checks]
+        if not value or len(set(value)) != len(value) or not set(value) <= set(known):
+            raise ValueError("check_ids must be distinct ids from the check set")
+        # Check-set order, so equal selections compare equal for idempotency.
+        return [c for c in known if c in value]
+
+
+ACTIVE_RUN = ("queued", "running")
+
+
+async def active_run(conn: AsyncConnection, actor: dict[str, Any], pid: UUID) -> UUID | None:
+    return (
+        await conn.execute(
+            visible(select(Run.id).join(Pack, Pack.id == Run.pack_id), actor["id"])
+            .where(Run.pack_id == pid, Run.status.in_(ACTIVE_RUN))
+            .order_by(Run.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
 
 
 async def document_info(
@@ -361,13 +388,22 @@ async def create_run(
         .mappings()
         .all()
     )
-    if not docs or any(
-        [
-            (await document_info(index_state, conn, dict(d), actor))["index_status"] != "done"
-            for d in docs
-        ]
+    running = await active_run(conn, actor, body.pack_id)
+    if running is not None:
+        raise APIError(
+            409, "run_active", "A check is already running on this pack", run_id=str(running)
+        )
+    # D83: documents whose index failed are skipped and recorded; others must be indexed.
+    statuses = [
+        (d, (await document_info(index_state, conn, dict(d), actor))["index_status"]) for d in docs
+    ]
+    if not any(s == "done" for _, s in statuses) or any(
+        s not in ("done", "failed") for _, s in statuses
     ):
         raise APIError(409, "pack_not_indexed", "Index every document before starting a run")
+    skipped = [
+        {"id": str(d["id"]), "filename": d["filename"]} for d, s in statuses if s == "failed"
+    ]
     checks = default_check_set()
     await conn.execute(
         pg_insert(CheckSet)
@@ -380,6 +416,7 @@ async def create_run(
                 pg_insert(Run)
                 .values(
                     **body.model_dump(),
+                    skipped_documents=skipped,
                     status="queued",
                     check_set_version=checks.version,
                     prompt_sha256=prompt_sha256(),
@@ -398,6 +435,36 @@ async def create_run(
     await audit(conn, actor, "create_run", row["id"], **audit_detail)
     await wake(conn)
     return dict(row), True
+
+
+# Rough tokens per check (input, output) for the New check estimate. Agent methods: a
+# few searches up to the 300k token cap (D79); one QBE luna run cost about $0.28 for
+# 15 checks. Method B is one call over 20 retrieved units.
+_ESTIMATE_TOKENS = {
+    "A": ((40_000, 1_500), (300_000, 10_000)),
+    "B": ((8_000, 800), (20_000, 2_000)),
+    "C": ((40_000, 1_500), (300_000, 10_000)),
+}
+
+
+def run_options() -> dict[str, Any]:
+    models = ModelTable.load().root
+    estimates: dict[str, dict[str, list[float]]] = {}
+    for method, bounds in _ESTIMATE_TOKENS.items():
+        estimates[method] = {
+            key: [
+                round((tin * float(m.input) + tout * float(m.output)) / 1_000_000, 4)
+                for tin, tout in bounds
+            ]
+            for key, m in models.items()
+        }
+    return {
+        "checks": [{"id": c.id, "title": c.title} for c in default_check_set().checks],
+        "models": [{"key": key, "model": m.model} for key, m in models.items()],
+        "methods": ["A", "B", "C"],
+        "estimate_per_check_usd": estimates,
+        "max_budget_usd": 10,
+    }
 
 
 async def get_run(conn: AsyncConnection, actor: dict[str, Any], rid: UUID) -> dict[str, Any]:

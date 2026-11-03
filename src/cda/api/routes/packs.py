@@ -26,7 +26,6 @@ from cda.parsing.store import ingest_pdf
 router = APIRouter()
 
 MAX_DOCUMENTS = 20
-ACTIVE_RUN = ("queued", "running")
 
 
 class PackInput(BaseModel):
@@ -113,14 +112,7 @@ async def list_packs(request: Request, conn: Conn, actor: Actor) -> list[dict[st
 
 
 async def active_run(conn: Conn, actor: Actor, pid: UUID) -> UUID | None:
-    return (
-        await conn.execute(
-            deps.visible(select(Run.id).join(Pack, Pack.id == Run.pack_id), actor["id"])
-            .where(Run.pack_id == pid, Run.status.in_(ACTIVE_RUN))
-            .order_by(Run.created_at.desc())
-            .limit(1)
-        )
-    ).scalar_one_or_none()
+    return await service.active_run(conn, actor, pid)
 
 
 @router.get("/packs/{pid}")

@@ -23,7 +23,7 @@ part_label = case(
 
 
 def unit_query(ctx: ToolContext) -> Any:
-    return (
+    stmt = (
         select(Unit.__table__, Document.filename, part_id, part_kind, part_label)
         .select_from(Unit)
         .join(Document, Unit.document_id == Document.id)
@@ -38,6 +38,10 @@ def unit_query(ctx: ToolContext) -> Any:
         )
         .where(Pack.id == ctx.pack_id, Document.deleted_at.is_(None))
     )
+    # Only add the filter when needed, so ordinary runs keep the same SQL.
+    if ctx.excluded_documents:
+        stmt = stmt.where(Document.id.not_in(ctx.excluded_documents))
+    return stmt
 
 
 async def inventory(ctx: ToolContext) -> list[dict[str, Any]] | None:
@@ -64,7 +68,7 @@ async def inventory(ctx: ToolContext) -> list[dict[str, Any]] | None:
         return None
     docs: dict[str, dict[str, Any]] = {}
     for row in rows:
-        if row["id"] is None:
+        if row["id"] is None or row["id"] in ctx.excluded_documents:
             continue
         did = str(row["id"])
         doc = docs.setdefault(

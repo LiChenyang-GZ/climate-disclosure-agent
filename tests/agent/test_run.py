@@ -609,3 +609,35 @@ async def test_checkpointer_tables_use_separate_schema(run_env, pg_url):
             "checkpoint_migrations",
         )
     }
+
+
+async def test_check_subset_runs_only_selected(run_env):
+    await change(run_env, check_ids=["G1", "S1"])
+    assert await execute(run_env) == "final"
+    assert {f.check_id for f in await findings(run_env)} == {"G1", "S1"}
+    assert set(run_env[3].calls) == {"G1", "S1"}
+
+
+async def test_demo_fake_llm_finishes_every_check(run_env):
+    from cda.llm.fake import DemoFakeLLM
+
+    run_env[2].llm = DemoFakeLLM(ModelTable.load())
+    assert await execute(run_env) in ("final", "waiting_review")
+    fs = await findings(run_env)
+    assert len(fs) == 15
+    assert any(f.status == "evidence_found" for f in fs), [
+        (f.status, f.needs_review_reason) for f in fs
+    ]
+
+
+async def test_skipped_document_is_not_searched(run_env):
+    from cda.llm.fake import DemoFakeLLM
+
+    async with run_env[0].connect() as c:
+        did = (await c.execute(select(Document.id))).scalar_one()
+    await change(run_env, skipped_documents=[{"id": str(did), "filename": "report.pdf"}])
+    run_env[2].llm = DemoFakeLLM(ModelTable.load())
+    await execute(run_env)
+    fs = await findings(run_env)
+    assert len(fs) == 15
+    assert not any(f.status == "evidence_found" for f in fs)

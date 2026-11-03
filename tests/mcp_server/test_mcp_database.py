@@ -3,9 +3,9 @@ from uuid import UUID, uuid4
 
 import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
-from sqlalchemy import delete, insert, select, text
+from sqlalchemy import delete, insert, select, text, update
 
-from cda.db.models import AuditLog, Document, Evidence, Finding, Team, Unit, User
+from cda.db.models import AuditLog, Document, Evidence, Finding, Run, Team, Unit, User
 from cda.indexing.embed import HashEmbedder
 from cda.mcp_server.server import build_server
 
@@ -233,6 +233,10 @@ async def test_failures(api, monkeypatch, case, code):
                         .returning(Finding.id)
                     )
                 ).scalar_one()
+                # One active run per pack (D83): finish the first before starting another.
+                await conn.execute(
+                    update(Run).where(Run.id == UUID(row["id"])).values(status="final")
+                )
             other = data(
                 await session.call_tool("start_check", {**args, "idempotency_key": str(uuid4())})
             )["run"]
