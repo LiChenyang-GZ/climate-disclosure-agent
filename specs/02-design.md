@@ -244,7 +244,7 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 12 | Findings submitted via `submit_finding` with a Pydantic schema |
 | 13 | Function calling inside the system; MCP for external clients |
 | 14 | Short-term memory only, within one check; no cross-run memory |
-| 15 | Truncate long tool results + step cap; no summarisation. Step cap 12, raised to 20 on 27 Oct together with D79 (QBE: at 12 steps A and C stopped on 9 of 15 checks) |
+| 15 | Truncate long tool results + step cap; no summarisation. Old tool results in the agent's prompt are shortened to tool, args, category and unit ids, keeping the newest 3 in full (T30, 17 Nov). Step cap 12, raised to 20 on 27 Oct together with D79 (QBE: at 12 steps A and C stopped on 9 of 15 checks) |
 | 16 | One worker per check, run in parallel |
 | 17 | Code verifies quotes; an LLM judge is optional later |
 | 18 | temperature 0 (E4) — superseded by D78: not supported by the models |
@@ -316,3 +316,6 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 84 | OneDrive / SharePoint import: device-code flow (no redirect URI locally), read-only scopes, tokens in API memory only; same pipeline as uploads; `documents.source` with etag for re-sync; changed file → new document + soft delete of the old (units immutable, D52); removed in Graph → marked, never deleted. Tested with recorded Graph responses (Christy, 27 Oct) |
 | 85 | Salesforce: client-credentials flow, credentials from settings / in-memory override, never in the database; pack ↔ Account link and per-finding Case records make the push idempotent; eligible findings are inconsistent, partial and no evidence; send button deferred to U4 / U5. Tested with recorded responses |
 | 86 | MCP guards against an outside AI being steered by document text (note 13, item 55): `start_check` budget ≤ $1 via MCP; results with document text carry a data-not-instructions `notice`; `start_check` checks the OpenAI key like REST. Five MCP tools only; cross-pack questions are answered by the skill looping `search_pack` over `list_packs` (Christy, 3 Nov) |
+| 87 | A run's settings (step cap, token cap, output tokens, tool timeout, seed, B top-k and score floor, LC scope and prompt cap, kept tool results) are stored on the run (`runs.settings`, NULL for older runs) and are what the worker uses, so every result says what produced it (note 13, items 58–59) |
+| 88 | When code ends a check as needs review although the model submitted a valid finding (cap hit, failed quotes, too few searches), the model's status is kept as `findings.proposed_status`; it is information, not a status |
+| 89 | Model responses are stored provider-neutrally in `llm_calls.response`; a replay client answers a new run from a recorded one by request fingerprint, for offline demos and free regression tests; any prompt or tool-result change shows as a miss |

@@ -73,6 +73,17 @@ Section numbers refer to `02-design.md`; D-numbers to its decision digest (§15)
 | T22 | mcp (Python SDK, stdio) | §12 | D13, D51 |
 | T23 | — | §5, §13 | D55, D69, D70, D71, D72, D73 |
 
+## Phase 1b — fixes from the design review (17 Nov 2026, Claude Code, no OpenAI credits)
+
+From note 13 step 4 and the 17 Nov design review: changes that need no design discussion and survive it. One PR each, in order.
+
+| ID | Task | Depends on | Tier | Decisions |
+|---|---|---|---|---|
+| T27 | Record each run's settings on the run; the stored values are the ones used | T12, T18 | normal | D15, D79, D87 |
+| T28 | Keep the model's status as `proposed_status` when code overrides it to needs review | T11, T27 | normal | D12, D30, D58, D88 |
+| T29 | Store model responses; replay a recorded run without calling the model | T07, T12, T27 | normal | D46, D66, D89 |
+| T30 | Shorten old tool results in the agent's prompt (keep the newest 3) | T11, T27 | strict | D15, D59, D79 |
+
 ## Phase 2 — UI and extras (Claude Code writes the code, no OpenAI credits)
 
 Started 27 Oct 2026. Claude writes code and tests directly on `task/<ID>` branches; same review and merge rules as Phase 1 (`CLAUDE.md` steps 4–7, without Codex). UI decisions: D80–D82.
