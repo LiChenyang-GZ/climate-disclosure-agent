@@ -239,7 +239,13 @@ async def test_worker_hook(run_env, pg_url, monkeypatch, caplog, enabled, raises
     stop, task = await run_server(run_env, pg_url, run)
     try:
         async with asyncio.timeout(10):
-            while len(seen) < 2 or (enabled and len(exports) < 2):
+            # The worker flushes in a thread after export returns; wait for both flushes
+            # too, or stopping the worker can race the second one on a slow runner.
+            while (
+                len(seen) < 2
+                or (enabled and len(exports) < 2)
+                or (enabled and not raises and len(client.calls) < 2)
+            ):
                 await asyncio.sleep(0.02)
     finally:
         stop.set()
