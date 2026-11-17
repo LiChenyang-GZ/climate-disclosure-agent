@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 from cda.agent.checkpoint import open_checkpointer
 from cda.agent.prompts import prompt_sha256
 from cda.agent.run_graph import RunDeps, run_run
+from cda.agent.run_settings import RunSettings
 from cda.checks.loader import load_check_set
 from cda.compare import compare_run
 from cda.db.models import (
@@ -164,6 +165,7 @@ async def score_stored_run(
             model=run.model_key,
             prompt_hash=run.prompt_sha256,
             check_set_version=run.check_set_version,
+            settings=run.settings,
         )
         return result
 
@@ -276,6 +278,9 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                                         idempotency_key=str(uuid4()),
                                         created_by=uid,
                                         status="queued",
+                                        settings=RunSettings.from_deps(deps).model_dump(
+                                            mode="json"
+                                        ),
                                     )
                                     .returning(Run.id)
                                 )

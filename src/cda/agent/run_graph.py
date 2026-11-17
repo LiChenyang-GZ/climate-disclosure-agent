@@ -12,12 +12,14 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.types import Command, Send, interrupt
+from pydantic import ValidationError
 from sqlalchemy import case, func, select, update
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from cda.agent.hooks import Comparer, EventSink, noop_comparer, noop_sink
 from cda.agent.prompts import prompt_sha256
 from cda.agent.run_budget import RunBudget
+from cda.agent.run_settings import RunSettings
 from cda.agent.state import WorkerResult
 from cda.agent.store import store_finding
 from cda.agent.worker_graph import WorkerDeps, run_worker
@@ -129,6 +131,19 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                 if r.prompt_sha256 != prompt_sha256()
                 else None
             )
+            if error is None:
+                # D87: stored settings win; a run without them records the worker's own.
+                try:
+                    settings = RunSettings.resolve(r.settings, deps)
+                except ValidationError:
+                    error = "invalid_settings"
+                else:
+                    if r.settings is None:
+                        await conn.execute(
+                            update(Run)
+                            .where(Run.id == run_id)
+                            .values(settings=settings.model_dump(mode="json"))
+                        )
             if error:
                 await conn.execute(
                     update(Run)
@@ -196,12 +211,13 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                 )
             else:
                 llm = _RunLLM(engine, run_id, deps)
+                settings = RunSettings.resolve(r.settings, deps)
                 try:
                     worker_deps = WorkerDeps(
                         llm=llm,
                         models=deps.models,
                         model_key=r.model_key,
-                        seed=deps.seed,
+                        seed=settings.seed,
                         conn=conn,
                         user_id=r.created_by,
                         pack_id=r.pack_id,
@@ -210,10 +226,10 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                         embedder=deps.embedder,
                         budget=budget,
                         emit=deps.emit,
-                        step_cap=deps.step_cap,
-                        token_cap=deps.token_cap,
-                        max_output_tokens=deps.max_output_tokens,
-                        tool_timeout_s=deps.tool_timeout_s,
+                        step_cap=settings.step_cap,
+                        token_cap=settings.token_cap,
+                        max_output_tokens=settings.max_output_tokens,
+                        tool_timeout_s=settings.tool_timeout_s,
                         excluded_documents=frozenset(UUID(d["id"]) for d in r.skipped_documents),
                     )
                     # T11 state contains a live connection. Do not inherit the outer
@@ -228,10 +244,10 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                                         r.created_by,
                                         r.pack_id,
                                         None,
-                                        deps.tool_timeout_s,
+                                        settings.tool_timeout_s,
                                         excluded_documents=worker_deps.excluded_documents,
                                     ),
-                                    deps.lc_scope,
+                                    settings.lc_scope,
                                 )
                                 lc_pack_loaded = True
                         worker_deps.lc_pack = lc_pack
@@ -239,16 +255,16 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                             worker_deps,
                             next(c for c in cs.checks if c.id == cid),
                             cs,
-                            scope=deps.lc_scope,
-                            max_prompt_tokens=deps.lc_max_prompt_tokens,
+                            scope=settings.lc_scope,
+                            max_prompt_tokens=settings.lc_max_prompt_tokens,
                         )
                     elif r.method == "B":
                         worker_call = run_method_b(
                             worker_deps,
                             next(c for c in cs.checks if c.id == cid),
                             cs,
-                            top_k=deps.b_top_k,
-                            min_vector_score=deps.b_min_vector_score,
+                            top_k=settings.b_top_k,
+                            min_vector_score=settings.b_min_vector_score,
                         )
                     else:
                         worker_call = run_worker(

@@ -318,6 +318,8 @@ class Run(Base):
     skipped_documents: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB(), nullable=False, server_default=sql_text("'[]'::jsonb")
     )
+    # D87: the settings the worker used; NULL for runs recorded before 0010.
+    settings: Mapped[dict[str, Any] | None] = mapped_column(JSONB(), nullable=True)
 
     __table_args__ = (
         CheckConstraint(_allowed_values("method", RUN_METHODS), name="ck_runs_method"),
