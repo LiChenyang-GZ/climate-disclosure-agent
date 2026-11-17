@@ -24,6 +24,20 @@ def markdown(value: object) -> str:
     )
 
 
+def settings_line(run: dict[str, Any]) -> str:
+    """D87: what the run executed with; older runs did not record it."""
+    settings = run.get("settings")
+    if not settings:
+        return "**Settings:** not recorded"
+    line = f"**Settings:** step cap {settings['step_cap']} · token cap {settings['token_cap']:,}"
+    if run["method"] == "LC":
+        scope = (
+            "sustainability part only" if settings["lc_scope"] == "sustainability" else "whole pack"
+        )
+        line += f" · LC scope: {scope}"
+    return line
+
+
 def csv_cell(value: object) -> str:
     value = str(value)
     return "'" + value if value.startswith(("=", "+", "-", "@", "\t", "\r")) else value
@@ -68,7 +82,8 @@ async def export_response(
             f"**Status:** {header['status']} \u00b7 **Method:** {run['method']} \u00b7 "
             f"**Model:** {run['model_key']} ({model}) \u00b7 "
             f"**Check set:** {run['check_set_version']} \u00b7 "
-            f"**Prompt:** {run['prompt_sha256'][:12]} \u00b7 **Exported:** {date.today().isoformat()}\n\n"
+            f"**Prompt:** {run['prompt_sha256'][:12]} \u00b7 **Exported:** {date.today().isoformat()}\n"
+            f"{settings_line(run)}\n\n"
             "| Check | Title | Status | Relief | Evidence | Review |\n"
             "|---|---|---|---|---|---|\n"
         )

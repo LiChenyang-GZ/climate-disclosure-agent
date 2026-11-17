@@ -264,3 +264,66 @@ async def test_reuse_is_per_embedder(env):
     other = await ingest_pack(engine, PACK, embedder=OtherEmbedder())
     assert first == again
     assert other != first
+
+
+async def test_run_eval_records_settings(env, monkeypatch, tmp_path):
+    # D87: the flags a paid eval ran with are stored on each run and in the scored result.
+    from cda.eval import run_eval
+
+    *_, url = env
+
+    class SubmitFake:
+        async def complete(self, **kw):
+            turn = FakeTurn(
+                tool_calls=[
+                    (
+                        "submit_finding",
+                        {
+                            "status": "no_evidence_found",
+                            "rationale": "Nothing found",
+                            "missing_aspects": [],
+                            "relief_applied": False,
+                            "relief_id": None,
+                            "evidence": [],
+                            "facts": [],
+                        },
+                    )
+                ]
+            )
+            return await FakeLLM([turn], ModelTable.load()).complete(**kw)
+
+    monkeypatch.setenv("CDA_DATABASE_URL", url)
+    monkeypatch.setattr(run_eval, "OpenAIClient", lambda models: SubmitFake())
+    args = run_eval.parser().parse_args(
+        [
+            "--pack",
+            str(PACK),
+            "--methods",
+            "LC",
+            "--repeats",
+            "1",
+            "--out",
+            str(tmp_path),
+            "--embedder",
+            "hash",
+            "--lc-scope",
+            "sustainability",
+            "--step-cap",
+            "7",
+            "--token-cap",
+            "123456",
+        ]
+    )
+    results = await run_eval.evaluate(args)
+    settings = results["methods"]["LC"][0]["settings"]
+    assert settings["lc_scope"] == "sustainability"
+    assert (settings["step_cap"], settings["token_cap"]) == (7, 123456)
+    engine = create_async_engine(url)
+    try:
+        async with engine.connect() as c:
+            stored = await c.scalar(
+                select(Run.settings).where(Run.id == results["methods"]["LC"][0]["run_id"])
+            )
+    finally:
+        await engine.dispose()
+    assert stored == settings

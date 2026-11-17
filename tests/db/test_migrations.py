@@ -71,3 +71,30 @@ def test_upgrade_head_twice_is_noop(pg_url: str) -> None:
 
     command.upgrade(config, "head")
     command.upgrade(config, "head")
+
+
+@pytest.mark.db
+def test_run_settings_column_is_nullable_without_default(pg_url: str) -> None:
+    # D87: runs recorded before 0010 stay NULL ("not recorded"), never a guessed default.
+    config = _alembic_config(pg_url)
+    command.upgrade(config, "head")
+    command.downgrade(config, "0009_salesforce")
+    command.upgrade(config, "head")
+
+    async def inspect_database() -> None:
+        engine = create_async_engine(pg_url)
+        async with engine.connect() as connection:
+            row = (
+                await connection.execute(
+                    text(
+                        "SELECT is_nullable, column_default, data_type FROM information_schema.columns"
+                        " WHERE table_name = 'runs' AND column_name = 'settings'"
+                    )
+                )
+            ).one()
+        await engine.dispose()
+        assert tuple(row) == ("YES", None, "jsonb")
+
+    import asyncio
+
+    asyncio.run(inspect_database())
