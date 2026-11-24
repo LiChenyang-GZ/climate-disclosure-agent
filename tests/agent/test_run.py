@@ -641,3 +641,46 @@ async def test_skipped_document_is_not_searched(run_env):
     fs = await findings(run_env)
     assert len(fs) == 15
     assert not any(f.status == "evidence_found" for f in fs)
+
+
+async def stored_settings(env):
+    async with env[0].connect() as c:
+        return (await c.execute(select(Run.settings).where(Run.id == env[1]))).scalar_one()
+
+
+async def test_settings_recorded_at_start(run_env):
+    # D87: a run created without settings records the worker's own when it starts.
+    from cda.agent.run_settings import RunSettings
+
+    assert await stored_settings(run_env) is None
+    assert await execute(run_env) == "final"
+    stored = await stored_settings(run_env)
+    assert stored == RunSettings.from_deps(run_env[2]).model_dump(mode="json")
+    assert stored["step_cap"] == 20 and stored["token_cap"] == 300_000
+
+
+async def test_stored_settings_win_over_deps(run_env):
+    from cda.agent.run_settings import RunSettings
+
+    settings = RunSettings.from_deps(run_env[2]).model_copy(update={"step_cap": 2})
+    await change(run_env, settings=settings.model_dump(mode="json"))
+    assert run_env[2].step_cap == 20
+    await execute(run_env)
+    fs = await findings(run_env)
+    # Step 1 searches; step 2 is the forced last step, so every check stops at the cap.
+    assert {(f.status, f.needs_review_reason, f.steps) for f in fs} == {
+        ("needs_review", "cap_hit", 2)
+    }
+    assert (await stored_settings(run_env))["step_cap"] == 2
+
+
+@pytest.mark.parametrize(
+    "stored", [{"step_cap": 1}, {"unknown": 1}, {"lc_scope": "chapter"}, {"token_cap": "x"}]
+)
+async def test_invalid_settings_fail_the_run(run_env, stored):
+    await change(run_env, settings=stored)
+    assert await execute(run_env) == "failed"
+    r = await row(run_env)
+    assert r.error == "invalid_settings"
+    assert await findings(run_env) == []
+    assert run_env[3].calls == Counter()

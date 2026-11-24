@@ -62,6 +62,7 @@ async def test_markdown_report_golden(monkeypatch, final):
             "prompt_sha256": "abcdef012345" * 5 + "abcd",
             "check_set_version": "2026.10.1",
             "status": "final" if final else "queued",
+            "settings": {"step_cap": 20, "token_cap": 300_000, "lc_scope": "pack"},
         },
         "md",
     )
@@ -94,3 +95,30 @@ def test_safe_run_error_codes(stored, expected):
         assert result["error_message"] == "The OpenAI API key is missing or was rejected."
     else:
         assert result["error_message"]
+
+
+@pytest.mark.parametrize(
+    "method,settings,expected",
+    [
+        ("A", None, "**Settings:** not recorded"),
+        ("A", {}, "**Settings:** not recorded"),
+        (
+            "LC",
+            {"step_cap": 20, "token_cap": 300_000, "lc_scope": "sustainability"},
+            "**Settings:** step cap 20 · token cap 300,000 · LC scope: sustainability part only",
+        ),
+        (
+            "LC",
+            {"step_cap": 12, "token_cap": 150_000, "lc_scope": "pack"},
+            "**Settings:** step cap 12 · token cap 150,000 · LC scope: whole pack",
+        ),
+        (
+            "B",
+            {"step_cap": 20, "token_cap": 300_000, "lc_scope": "sustainability"},
+            "**Settings:** step cap 20 · token cap 300,000",
+        ),
+    ],
+)
+def test_settings_line(method, settings, expected):
+    # D87: older runs did not record settings; LC scope only matters for LC runs.
+    assert export.settings_line({"method": method, "settings": settings}) == expected
