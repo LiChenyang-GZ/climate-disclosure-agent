@@ -38,6 +38,18 @@ def settings_line(run: dict[str, Any]) -> str:
     return line
 
 
+def status_label(status: str) -> str:
+    return status.replace("_", " ").capitalize()
+
+
+def status_cell(row: dict[str, Any]) -> str:
+    """D88: show the model's own status when code overrode it to needs review."""
+    label = status_label(row["status"])
+    if row.get("proposed_status"):
+        label += f" (model: {status_label(row['proposed_status'])})"
+    return label
+
+
 def csv_cell(value: object) -> str:
     value = str(value)
     return "'" + value if value.startswith(("=", "+", "-", "@", "\t", "\r")) else value
@@ -95,7 +107,7 @@ async def export_response(
             cells = [
                 markdown(row["check_id"]),
                 markdown(row["title"]) if row["title"] else "\u2014",
-                row["status"].replace("_", " ").capitalize(),
+                status_cell(row),
                 "Relief applied" if row["relief_applied"] else "\u2014",
                 evidence or "\u2014",
                 review_cells.get(row["check_id"]) or "\u2014",
@@ -111,13 +123,25 @@ async def export_response(
     writer.writerow(["field", "value"])
     for key, value in header.items():
         writer.writerow([csv_cell(key), csv_cell(value)])
-    keys = ["check_id", "title", "status", "relief_applied", "evidence", "review_note"]
+    keys = [
+        "check_id",
+        "title",
+        "status",
+        "proposed_status",
+        "relief_applied",
+        "evidence",
+        "review_note",
+    ]
     writer.writerow(keys)
     for row in rows:
         writer.writerow(
             [
                 csv_cell(
-                    json.dumps(row[key], ensure_ascii=False) if key == "evidence" else row[key]
+                    json.dumps(row[key], ensure_ascii=False)
+                    if key == "evidence"
+                    else ""
+                    if row[key] is None
+                    else row[key]
                 )
                 for key in keys
             ]

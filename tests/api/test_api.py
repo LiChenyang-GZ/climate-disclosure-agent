@@ -342,6 +342,37 @@ async def test_export_and_findings(api):
     assert "Final" in (await api[0].get(f"/runs/{rid}/export?format=md")).text
 
 
+async def test_proposed_status_returned_and_exported(api):
+    # D88: the model's status kept next to a code override flows through API and exports.
+    rid = (await run(api))["id"]
+    fid = await finding(api, rid)
+    async with api[1].begin() as conn:
+        await conn.execute(
+            update(Finding)
+            .where(Finding.id == fid)
+            .values(needs_review_reason="cap_hit", proposed_status="partial_evidence")
+        )
+    rows = {r["check_id"]: r for r in (await api[0].get(f"/runs/{rid}/findings")).json()}
+    assert rows["G1"]["proposed_status"] == "partial_evidence"
+    assert rows["G2"]["proposed_status"] is None  # not checked placeholder
+    detail = (await api[0].get(f"/findings/{fid}")).json()
+    assert (detail["status"], detail["proposed_status"]) == ("needs_review", "partial_evidence")
+    md = (await api[0].get(f"/runs/{rid}/export?format=md")).text
+    assert "| Needs review (model: Partial evidence) |" in md
+    assert "| Not checked |" in md
+    data = (await api[0].get(f"/runs/{rid}/export?format=json")).json()
+    by_check = {r["check_id"]: r for r in data["findings"]}
+    assert by_check["G1"]["proposed_status"] == "partial_evidence"
+    assert by_check["G2"]["proposed_status"] is None
+    lines = (await api[0].get(f"/runs/{rid}/export?format=csv")).text.splitlines()
+    header = next(i for i, line in enumerate(lines) if line.startswith("check_id,"))
+    assert lines[header].split(",")[:4] == ["check_id", "title", "status", "proposed_status"]
+    g1 = next(line for line in lines[header:] if line.startswith("G1,"))
+    g2 = next(line for line in lines[header:] if line.startswith("G2,"))
+    assert ",needs_review,partial_evidence," in g1
+    assert ",not_checked,," in g2
+
+
 async def test_safe_server_error(api, monkeypatch):
     async def fail(*args, **kwargs):
         raise RuntimeError("SELECT secret FROM /private/file")

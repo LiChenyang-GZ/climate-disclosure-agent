@@ -26,6 +26,8 @@ class WorkerResult:
     tokens_in: int
     tokens_out: int
     cost_usd: Decimal
+    # D88: the model's own status when code overrides it to needs_review.
+    proposed_status: str | None = None
 
 
 @dataclass

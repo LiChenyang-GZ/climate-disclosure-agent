@@ -23,6 +23,7 @@ async def store_finding(conn: AsyncConnection, run_id: UUID, result: WorkerResul
                     missing_aspects=result.missing_aspects,
                     relief_applied=result.relief_applied,
                     needs_review_reason=result.needs_review_reason,
+                    proposed_status=result.proposed_status,
                     steps=result.steps,
                     tokens_in=result.tokens_in,
                     tokens_out=result.tokens_out,

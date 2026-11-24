@@ -148,6 +148,7 @@ async def test_verification(harness, quote, uid, reason):
     d, llm, c, cs = harness([turn(evidence=[{"unit_id": uid, "quote": quote, "role": "supports"}])])
     r = await run_method_b(d, c, cs)
     assert r.needs_review_reason == "quote_verification_failed"
+    assert r.proposed_status == "evidence_found"  # D88
     assert r.evidence[0].reason == reason and not r.evidence[0].ok
     assert len(llm.requests) == 1
 
@@ -222,6 +223,7 @@ async def test_no_call(harness, monkeypatch, case, reason):
         d, c, cs, min_vector_score=0.9 if case in ("threshold", "no_score") else None
     )
     assert r.needs_review_reason == reason and not llm.requests
+    assert r.proposed_status is None  # no submission was made
 
 
 @pytest.mark.parametrize("missing", [False, True])
@@ -238,6 +240,7 @@ async def test_no_evidence(harness, monkeypatch, missing):
     r = await run_method_b(d, c, cs)
     assert r.status == ("needs_review" if missing else "no_evidence_found")
     assert r.needs_review_reason == ("insufficient_search" if missing else None)
+    assert r.proposed_status == ("no_evidence_found" if missing else None)
     if not missing:
         assert r.confidence == "low"
 

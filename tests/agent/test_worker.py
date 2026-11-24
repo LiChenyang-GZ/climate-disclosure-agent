@@ -518,3 +518,76 @@ def test_submission_strict_schema():
     for node in [schema, *schema["$defs"].values()]:
         assert set(node["required"]) == set(node["properties"])
         assert node["additionalProperties"] is False
+
+
+# D88 / T28: the model's own status is kept when code overrides it to needs_review.
+
+
+async def test_proposed_status_cap_hit_with_verified_submission(harness):
+    partial = submission(status="partial_evidence", missing_aspects=["Missing"])
+    r, llm = await run(
+        harness, [turn("keyword_search", {"query": "x"}), turn(args=partial)], step_cap=2
+    )
+    assert llm.requests[-1]["tool_choice"] == "submit_finding"
+    assert all(e.ok for e in r.evidence)
+    assert (r.status, r.needs_review_reason) == ("needs_review", "cap_hit")
+    assert r.proposed_status == "partial_evidence"
+
+
+async def test_proposed_status_insufficient_search(harness):
+    r, _ = await run(
+        harness,
+        [
+            *[turn("keyword_search", {"query": str(i)}) for i in range(3)],
+            turn(args=submission(status="no_evidence_found", evidence=[])),
+        ],
+    )
+    assert (r.status, r.needs_review_reason) == ("needs_review", "insufficient_search")
+    assert r.proposed_status == "no_evidence_found"
+
+
+async def test_proposed_status_quotes_fail_twice(harness):
+    wrong = submission(
+        status="inconsistent",
+        evidence=[
+            {"unit_id": UID, "quote": "invented", "role": "side_a"},
+            {"unit_id": UID, "quote": "climate risk", "role": "side_b"},
+        ],
+    )
+    r, _ = await run(harness, [turn(args=wrong), turn(args=wrong)])
+    assert r.needs_review_reason == "quote_verification_failed"
+    assert r.proposed_status == "inconsistent"
+
+
+@pytest.mark.parametrize(
+    "script,reason",
+    [
+        # Cap hit while the model is still searching: it never submitted.
+        (
+            [turn("keyword_search", {"query": "x"}), turn("keyword_search", {"query": "y"})],
+            "cap_hit",
+        ),
+        # Cap hit on a submission that fails validation: nothing valid was submitted.
+        ([turn("keyword_search", {"query": "x"}), turn(args=submission(evidence=[]))], "cap_hit"),
+        ([turn()], None),
+        ([LLMRetryExhausted()], "llm_unavailable"),
+    ],
+)
+async def test_proposed_status_null(harness, script, reason):
+    r, _ = await run(harness, script, step_cap=2)
+    assert r.needs_review_reason == reason
+    assert r.proposed_status is None
+
+
+async def test_proposed_status_null_when_not_checked(harness):
+    d, _, c, cs = harness([])
+    d.budget = MemoryBudget(Decimal(0))
+    r = await run_worker(d, c, cs)
+    assert r.status == "not_checked" and r.proposed_status is None
+
+
+async def test_proposed_status_null_on_invalid_output(harness):
+    bad = turn(args=submission(evidence=[]))
+    r, _ = await run(harness, [bad, bad])
+    assert (r.status, r.needs_review_reason) == ("error", "invalid_output")
+    assert r.proposed_status is None
