@@ -53,6 +53,7 @@ class RunDeps:
     b_min_vector_score: float | None = None
     lc_scope: Literal["pack", "sustainability"] = "pack"
     lc_max_prompt_tokens: int = 200_000
+    keep_tool_results: int = 3  # D15, D59
     reraise: tuple[type[BaseException], ...] = ()
 
 
@@ -230,6 +231,7 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                         token_cap=settings.token_cap,
                         max_output_tokens=settings.max_output_tokens,
                         tool_timeout_s=settings.tool_timeout_s,
+                        keep_tool_results=settings.keep_tool_results,
                         excluded_documents=frozenset(UUID(d["id"]) for d in r.skipped_documents),
                     )
                     # T11 state contains a live connection. Do not inherit the outer
