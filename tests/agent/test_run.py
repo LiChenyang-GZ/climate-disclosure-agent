@@ -657,6 +657,26 @@ async def test_settings_recorded_at_start(run_env):
     stored = await stored_settings(run_env)
     assert stored == RunSettings.from_deps(run_env[2]).model_dump(mode="json")
     assert stored["step_cap"] == 20 and stored["token_cap"] == 300_000
+    assert stored["keep_tool_results"] == 3  # T30
+
+
+async def test_stored_keep_tool_results_reaches_worker(run_env, monkeypatch):
+    # T30: the run's stored keep_tool_results is the one the worker uses.
+    import cda.agent.run_graph as rg
+
+    seen = []
+    original = rg.run_worker
+
+    async def spy(worker_deps, check, cs):
+        seen.append(worker_deps.keep_tool_results)
+        return await original(worker_deps, check, cs)
+
+    monkeypatch.setattr(rg, "run_worker", spy)
+    await change(run_env, settings={"keep_tool_results": 1})
+    assert run_env[2].keep_tool_results == 3
+    assert await execute(run_env) == "final"
+    assert seen and set(seen) == {1}
+    assert (await stored_settings(run_env))["keep_tool_results"] == 1
 
 
 async def test_stored_settings_win_over_deps(run_env):
@@ -675,7 +695,14 @@ async def test_stored_settings_win_over_deps(run_env):
 
 
 @pytest.mark.parametrize(
-    "stored", [{"step_cap": 1}, {"unknown": 1}, {"lc_scope": "chapter"}, {"token_cap": "x"}]
+    "stored",
+    [
+        {"step_cap": 1},
+        {"unknown": 1},
+        {"lc_scope": "chapter"},
+        {"token_cap": "x"},
+        {"keep_tool_results": 0},
+    ],
 )
 async def test_invalid_settings_fail_the_run(run_env, stored):
     await change(run_env, settings=stored)

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from cda.agent.budget import Budget
 from cda.agent.finding import SubmitFinding
+from cda.agent.history import shorten_history
 from cda.agent.hooks import EventSink, noop_sink
 from cda.agent.nosevidence import accept
 from cda.agent.prompts import render
@@ -57,6 +58,7 @@ class WorkerDeps:
     max_output_tokens: int = 2000
     tool_timeout_s: float = 10.0
     excluded_documents: frozenset[UUID] = frozenset()  # D83
+    keep_tool_results: int = 3  # D15, D59: newer tool results stay in full
 
 
 class GraphState(TypedDict):
@@ -144,7 +146,8 @@ def build_graph(
         s.messages = [
             Message("system", system),
             Message("user", user),
-            *s.history,
+            # s.history stays complete; only the prompt carries shortened old results.
+            *shorten_history(s.history, deps.keep_tool_results),
             Message("user", summary),
         ]
         prompt_tokens = estimate_tokens(s.messages, tools)

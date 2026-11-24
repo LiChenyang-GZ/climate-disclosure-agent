@@ -20,6 +20,7 @@ class RunSettings(BaseModel):
     b_min_vector_score: float | None
     lc_scope: Literal["pack", "sustainability"]
     lc_max_prompt_tokens: int = Field(ge=1)
+    keep_tool_results: int = Field(ge=1)
 
     @classmethod
     def from_deps(cls, deps: "RunDeps") -> "RunSettings":
