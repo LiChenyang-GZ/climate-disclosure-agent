@@ -568,6 +568,8 @@ class LLMCall(Base):
     )
     cost_usd: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
     latency_ms: Mapped[int | None] = mapped_column(Integer(), nullable=True)
+    # D89: provider-neutral LLMResponse (content, tool_calls, finish_reason, model).
+    response: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=sql_text("now()")
     )

@@ -30,3 +30,27 @@ async def test_record_call(db, rows):
     assert stored["system_fingerprint"] == "fake"
     assert stored["latency_ms"] == 0
     assert stored["cost_usd"] == Decimal("0.123456")
+    assert stored["response"] == {
+        "content": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "model": "sol",
+    }
+
+
+@pytest.mark.db
+async def test_record_call_stores_tool_calls(db, rows):
+    # D89: our own response shape (for replay), never the provider's raw payload.
+    response = await FakeLLM(
+        [FakeTurn(tool_calls=[("keyword_search", {"query": "climate"})])]
+    ).complete(messages=[], tools=[], model_key="sol")
+    await record_call(db, run_id=rows["run"], check_id="G1", step=1, response=response, cost=0)
+    stored = (await db.execute(select(LLMCall.response))).scalar_one()
+    assert stored == {
+        "content": None,
+        "tool_calls": [
+            {"id": "call_1", "name": "keyword_search", "arguments": '{"query": "climate"}'}
+        ],
+        "finish_reason": "tool_calls",
+        "model": "sol",
+    }

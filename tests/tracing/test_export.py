@@ -125,6 +125,15 @@ async def exported(run_env):
                     tokens_cached=50,
                     cost_usd=0.1,
                     latency_ms=100,
+                    # D89: the stored response must never reach the trace export.
+                    response={
+                        "content": "SECRET PROMPT",
+                        "tool_calls": [
+                            {"id": "c", "name": "submit_finding", "arguments": "SECRET QUOTE"}
+                        ],
+                        "finish_reason": "tool_calls",
+                        "model": "gpt-6.1-sol",
+                    },
                     created_at=now + timedelta(seconds=3),
                 )
             )

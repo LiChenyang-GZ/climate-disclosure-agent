@@ -74,6 +74,33 @@ def test_upgrade_head_twice_is_noop(pg_url: str) -> None:
 
 
 @pytest.mark.db
+def test_llm_call_response_column(pg_url: str) -> None:
+    # D89: calls recorded before 0012 stay NULL; downgrade to 0011 and back.
+    config = _alembic_config(pg_url)
+    command.upgrade(config, "head")
+    command.downgrade(config, "0011_proposed_status")
+    command.upgrade(config, "head")
+
+    async def inspect_database() -> None:
+        engine = create_async_engine(pg_url)
+        async with engine.connect() as connection:
+            row = (
+                await connection.execute(
+                    text(
+                        "SELECT is_nullable, column_default, data_type FROM information_schema.columns"
+                        " WHERE table_name = 'llm_calls' AND column_name = 'response'"
+                    )
+                )
+            ).one()
+        await engine.dispose()
+        assert tuple(row) == ("YES", None, "jsonb")
+
+    import asyncio
+
+    asyncio.run(inspect_database())
+
+
+@pytest.mark.db
 def test_proposed_status_column_and_constraint(pg_url: str) -> None:
     # D88: findings stored before 0011 stay NULL; downgrade removes column and constraint.
     config = _alembic_config(pg_url)
