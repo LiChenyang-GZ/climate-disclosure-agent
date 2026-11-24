@@ -712,7 +712,11 @@ async def finding_detail(conn: AsyncConnection, actor: dict[str, Any], fid: UUID
             {**dict(r), "decision": "accept" if r["decision"] == "confirm" else "change"}
             for r in reviews
         ],
-        "trace": {"llm_calls": [dict(c) for c in calls], "tool_called": [dict(e) for e in events]},
+        # D89: the stored model response is for replay only; the trace keeps accounting fields.
+        "trace": {
+            "llm_calls": [{k: v for k, v in c.items() if k != "response"} for c in calls],
+            "tool_called": [dict(e) for e in events],
+        },
     }
 
 

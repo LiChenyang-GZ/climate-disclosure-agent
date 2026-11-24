@@ -2,6 +2,7 @@
 
 from dataclasses import asdict
 from decimal import Decimal
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import insert
@@ -9,6 +10,19 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from cda.db.models import LLMCall
 from cda.llm.types import LLMResponse
+
+
+def response_payload(response: LLMResponse) -> dict[str, Any]:
+    """D89: our own response shape, never the provider's raw payload."""
+    return {
+        "content": response.message.content,
+        "tool_calls": [
+            {"id": c.id, "name": c.name, "arguments": c.arguments}
+            for c in response.message.tool_calls
+        ],
+        "finish_reason": response.finish_reason,
+        "model": response.model,
+    }
 
 
 async def record_call(
@@ -30,5 +44,6 @@ async def record_call(
             **asdict(response.usage),
             cost_usd=cost,
             latency_ms=response.latency_ms,
+            response=response_payload(response),
         )
     )
