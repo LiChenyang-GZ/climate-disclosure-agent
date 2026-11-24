@@ -98,6 +98,26 @@ def test_safe_run_error_codes(stored, expected):
 
 
 @pytest.mark.parametrize(
+    "row,expected",
+    [
+        ({"status": "evidence_found"}, "Evidence found"),
+        ({"status": "needs_review", "proposed_status": None}, "Needs review"),
+        (
+            {"status": "needs_review", "proposed_status": "partial_evidence"},
+            "Needs review (model: Partial evidence)",
+        ),
+        (
+            {"status": "needs_review", "proposed_status": "no_evidence_found"},
+            "Needs review (model: No evidence found)",
+        ),
+    ],
+)
+def test_status_cell(row, expected):
+    # D88: the model's own status is shown only when code overrode it.
+    assert export.status_cell(row) == expected
+
+
+@pytest.mark.parametrize(
     "method,settings,expected",
     [
         ("A", None, "**Settings:** not recorded"),

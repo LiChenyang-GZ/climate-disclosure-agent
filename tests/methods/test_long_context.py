@@ -288,6 +288,7 @@ async def test_non_verbatim_quote_is_review_after_one_call(monkeypatch):
     deps = make_deps([FakeTurn(tool_calls=[("submit_finding", submitted("u1", "invented"))])])
     result = await lc.run_long_context(deps, load_check_set().checks[0], load_check_set())
     assert result.needs_review_reason == "quote_verification_failed"
+    assert result.proposed_status == "evidence_found"  # D88
     assert len(deps.llm.requests) == 1
 
 

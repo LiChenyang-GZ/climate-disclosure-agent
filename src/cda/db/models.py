@@ -35,6 +35,7 @@ from cda.db.enums import (
     FINDING_STATUSES,
     INCONSISTENCY_TYPES,
     PAGE_HALVES,
+    PROPOSED_STATUSES,
     REVIEW_DECISIONS,
     RUN_METHODS,
     RUN_STATUSES,
@@ -46,6 +47,7 @@ from cda.db.enums import (
     FindingStatus,
     InconsistencyType,
     PageHalf,
+    ProposedStatus,
     ReviewDecision,
     RunMethod,
     RunStatus,
@@ -383,6 +385,7 @@ class Finding(Base):
         Boolean(), nullable=False, server_default=sql_text("false")
     )
     needs_review_reason: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    proposed_status: Mapped[ProposedStatus | None] = mapped_column(Text(), nullable=True)
     steps: Mapped[int] = mapped_column(Integer(), nullable=False)
     tokens_in: Mapped[int] = mapped_column(Integer(), nullable=False, server_default=sql_text("0"))
     tokens_out: Mapped[int] = mapped_column(Integer(), nullable=False, server_default=sql_text("0"))
@@ -401,6 +404,10 @@ class Finding(Base):
             name="ck_findings_status",
         ),
         CheckConstraint(_allowed_values("confidence", CONFIDENCES), name="ck_findings_confidence"),
+        CheckConstraint(
+            _allowed_values("proposed_status", PROPOSED_STATUSES),
+            name="ck_findings_proposed_status",
+        ),
         CheckConstraint("steps >= 0", name="ck_findings_steps"),
         UniqueConstraint("run_id", "check_id", name="uq_findings_run_id_check_id"),
         Index("ix_findings_run_id", "run_id"),

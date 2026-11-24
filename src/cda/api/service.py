@@ -552,6 +552,7 @@ async def finding_rows(
                     "status": "not_checked",
                     "confidence": None,
                     "needs_review_reason": None,
+                    "proposed_status": None,
                     "relief_applied": False,
                     "evidence_count": 0,
                     "review_state": "none",

@@ -28,6 +28,10 @@ FindingStatus = Literal[
 ]
 FINDING_STATUSES: tuple[str, ...] = get_args(FindingStatus)
 
+# D88: a status the model can submit; kept when code overrides it to needs_review.
+ProposedStatus = Literal["evidence_found", "partial_evidence", "no_evidence_found", "inconsistent"]
+PROPOSED_STATUSES: tuple[str, ...] = get_args(ProposedStatus)
+
 Confidence = Literal["high", "low"]
 CONFIDENCES: tuple[str, ...] = get_args(Confidence)
 

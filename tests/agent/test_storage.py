@@ -161,6 +161,37 @@ async def test_storage(db, setup, run_id):
     assert (await db.execute(select(Finding.id).where(Finding.id == fid))).scalar_one() == fid
 
 
+async def test_storage_proposed_status(db, setup, run_id):
+    # D88: proposed_status is stored; the check constraint only allows submittable statuses.
+    result = WorkerResult(
+        check_id="G1",
+        status="needs_review",
+        confidence=None,
+        rationale="Review",
+        missing_aspects=["missing"],
+        relief_applied=False,
+        needs_review_reason="cap_hit",
+        evidence=[],
+        facts=[],
+        steps=20,
+        tokens_in=1,
+        tokens_out=1,
+        cost_usd=Decimal("0.01"),
+        proposed_status="partial_evidence",
+    )
+    fid = await store_finding(db, run_id, result)
+    stored = (await db.execute(select(Finding.proposed_status).where(Finding.id == fid))).scalar()
+    assert stored == "partial_evidence"
+    for bad in ("needs_review", "not_checked", "error"):
+        with pytest.raises(IntegrityError):
+            async with db.begin_nested():
+                await db.execute(
+                    text("UPDATE findings SET proposed_status = :v WHERE id = :id"),
+                    {"v": bad, "id": fid},
+                )
+    await db.execute(text("UPDATE findings SET proposed_status = NULL WHERE id = :id"), {"id": fid})
+
+
 @pytest.mark.parametrize("method", ["A", "C"])
 @pytest.mark.parametrize(
     "case", ["found", "low", "partial", "none", "inconsistent", "relief", "foreign", "injection"]

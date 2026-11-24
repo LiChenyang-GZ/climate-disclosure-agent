@@ -85,6 +85,7 @@ def _finish(
         s.tokens_in,
         s.tokens_out,
         s.cost,
+        f.status if f and status == "needs_review" else None,
     )
     s.route = END
 
