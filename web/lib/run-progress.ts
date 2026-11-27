@@ -57,7 +57,8 @@ export function runLabel(run: RunDetail, findings: FindingRow[]): string {
 
 export function runError(run: RunDetail): string | null {
   if (run.status !== "failed") return null;
-  if (run.error === "llm_auth") return "OpenAI rejected the API key. Check OPENAI_API_KEY.";
+  if (run.error === "llm_auth")
+    return "The model provider rejected the API key. Check the key for this model in .env.";
   return run.error_message ?? "The check could not be completed.";
 }
 

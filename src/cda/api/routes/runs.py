@@ -11,6 +11,7 @@ from cda.api.deps import Actor, Conn, audit
 from cda.api.errors import APIError
 from cda.api.service import RunInput as RunInput  # noqa: PLC0414
 from cda.api.service import wake as wake  # noqa: PLC0414
+from cda.config import KEY_MISSING, provider_of
 from cda.db.models import Run
 
 router = APIRouter()
@@ -25,8 +26,9 @@ async def create_run(
     actor: Actor,
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> dict[str, Any]:
-    if not request.app.state.settings.llm_ready:
-        raise APIError(409, "llm_key_missing", "OpenAI API key isn't set")
+    provider = provider_of(body.model_key)
+    if not request.app.state.settings.llm_ready_for(provider):
+        raise APIError(409, "llm_key_missing", KEY_MISSING[provider])
     row, created = await service.create_run(
         conn, actor, body, idempotency_key, request.app.state.index_state
     )

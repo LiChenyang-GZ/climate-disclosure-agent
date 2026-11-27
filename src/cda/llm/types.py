@@ -13,6 +13,10 @@ class ToolCall:
     id: str
     name: str
     arguments: str
+    # D90: opaque provider state that must be sent back with this call (Gemini's
+    # thought signature, URL-safe base64). Not part of equality, fingerprints or
+    # stored responses.
+    signature: str | None = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True)

@@ -42,7 +42,7 @@ from cda.eval.report import render_report
 from cda.eval.retrieval_eval import evaluate_retrieval
 from cda.indexing.embed import BgeEmbedder, Embedder, HashEmbedder
 from cda.llm.cost import ModelTable
-from cda.llm.openai_client import OpenAIClient
+from cda.llm.providers import make_llm
 from cda.runner.events import EventSink
 from cda.tools.context import ToolContext
 from cda.tools.parts_sql import inventory
@@ -243,7 +243,7 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                     )
                 return results
             models = ModelTable.load()
-            llm = OpenAIClient(models)
+            llm = make_llm(models)
             ids = []
             async with open_checkpointer(url) as saver:
                 deps = RunDeps(

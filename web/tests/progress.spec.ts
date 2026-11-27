@@ -133,7 +133,7 @@ test.describe("Progress page (PRD 6.5, 9.1 #5)", () => {
         json: runDetail({
           status: "failed",
           error: "llm_auth",
-          error_message: "The OpenAI API key is missing or was rejected.",
+          error_message: "The model provider's API key is missing or was rejected.",
           finished_at: new Date().toISOString(),
         }),
       }),
@@ -141,7 +141,7 @@ test.describe("Progress page (PRD 6.5, 9.1 #5)", () => {
     });
     await expect(page.getByTestId("run-status")).toHaveText("Failed");
     await expect(
-      page.getByRole("alert").filter({ hasText: "OpenAI rejected the API key. Check OPENAI_API_KEY." }),
+      page.getByRole("alert").filter({ hasText: "The model provider rejected the API key. Check the key for this model in .env." }),
     ).toBeVisible();
     await expect(row(page, "G1")).toContainText("Not checked");
   });

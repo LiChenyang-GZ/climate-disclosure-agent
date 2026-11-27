@@ -61,6 +61,6 @@ test("rejected key: the run fails with the API key message", async ({ page }) =>
   await startCheck(page, ["G1"], "0.02");
   await expect(page.getByTestId("run-status")).toHaveText("Failed", { timeout: 120_000 });
   await expect(
-    page.getByRole("alert").filter({ hasText: "OpenAI rejected the API key. Check OPENAI_API_KEY." }),
+    page.getByRole("alert").filter({ hasText: "The model provider rejected the API key. Check the key for this model in .env." }),
   ).toBeVisible();
 });

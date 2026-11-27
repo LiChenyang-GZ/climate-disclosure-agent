@@ -126,11 +126,45 @@ async def test_api_key_missing(api, key, fake, status):
             ).first() is None
 
 
+@pytest.mark.parametrize(
+    ("settings_values", "status"),
+    [
+        ({"openai_api_key": SecretStr("sk-x")}, 409),
+        ({"gemini_api_key": SecretStr("g-x")}, 201),
+        ({"google_api_key": SecretStr("g-x")}, 201),
+        ({"google_genai_use_vertexai": True, "google_cloud_project": "proj"}, 201),
+        ({"google_genai_use_vertexai": True, "google_cloud_project": " "}, 409),
+        ({"google_cloud_project": "proj"}, 409),
+    ],
+)
+async def test_gemini_key_checked_for_gemini_models(api, settings_values, status):
+    """D90: the key check follows the requested model's provider."""
+    pid = await indexed(api)
+    settings = api[2].state.settings
+    settings.openai_api_key = None
+    settings.cda_fake_llm = False
+    settings.gemini_api_key = settings.google_api_key = None
+    settings.google_genai_use_vertexai = False
+    settings.google_cloud_project = None
+    for name, value in settings_values.items():
+        setattr(settings, name, value)
+    response = await start(api, pid, model_key="flash")
+    assert response.status_code == status, response.text
+    if status == 409:
+        assert response.json() == {
+            "error": "llm_key_missing",
+            "message": "Gemini API key isn't set. Add GEMINI_API_KEY (or the Vertex AI "
+            "settings) to .env and restart the backend.",
+        }
+    else:
+        assert response.json()["model_key"] == "flash"
+
+
 async def test_run_options(api):
     body = (await api[0].get("/run-options", headers={"X-Demo-User": "alex"})).json()
     assert [c["id"] for c in body["checks"]] == [c.id for c in default_check_set().checks]
     assert len(body["checks"]) == 15
-    assert {m["key"] for m in body["models"]} == {"luna", "sol"}
+    assert {m["key"] for m in body["models"]} == {"luna", "sol", "flash", "lite"}
     assert body["methods"] == ["A", "B", "C"]
     for method in body["methods"]:
         for model in ("luna", "sol"):

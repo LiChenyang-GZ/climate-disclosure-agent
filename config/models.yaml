@@ -11,3 +11,21 @@ sol:
   input: 2.00
   cached_input: 0.10
   output: 10.00
+# D90: Gemini via the Google Gen AI SDK (Gemini API key or Vertex AI). Paid-tier prices checked
+# 27 Nov 2026. flash is at its list price from 1 Jan 2027; its introductory price until
+# 31 Dec 2026 is half, so costs recorded before then are an upper bound. Thinking tokens are
+# billed as output and count against max_output_tokens.
+flash:
+  provider: gemini
+  model: gemini-3.8-flash
+  thinking_level: low
+  input: 1.50
+  cached_input: 0.15
+  output: 7.50
+lite:
+  provider: gemini
+  model: gemini-3.5-flash-lite
+  thinking_level: minimal
+  input: 0.30
+  cached_input: 0.03
+  output: 2.50

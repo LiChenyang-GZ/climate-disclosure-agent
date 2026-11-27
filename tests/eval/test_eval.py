@@ -261,7 +261,7 @@ def test_spend_guard(monkeypatch, tmp_path):
         raise AssertionError("must not reach database or model")
 
     monkeypatch.setattr(run_eval, "make_engine", fail)
-    monkeypatch.setattr(run_eval, "OpenAIClient", fail)
+    monkeypatch.setattr(run_eval, "make_llm", fail)
     with pytest.raises(SystemExit) as exc:
         run_eval.main(
             [

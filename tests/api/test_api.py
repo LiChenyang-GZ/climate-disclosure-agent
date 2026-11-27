@@ -543,7 +543,7 @@ async def test_review_state_is_per_finding(api):
 @pytest.mark.parametrize(
     "stored,code,message",
     [
-        ("llm_auth", "llm_auth", "The OpenAI API key is missing or was rejected."),
+        ("llm_auth", "llm_auth", "The model provider's API key is missing or was rejected."),
         (
             "IntegrityError",
             "internal_error",
