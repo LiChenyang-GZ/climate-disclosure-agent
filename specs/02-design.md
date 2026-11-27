@@ -2,7 +2,7 @@
 
 This is the source of truth for **how** the system is built. `01-requirements.md` says what it does; `03-tasks.md` says in what order it is built. If code and this file disagree, raise it in the PR — do not silently pick one.
 
-Decisions are numbered **D1–D85**. Task specs cite them by number (e.g. "follow D35, D58").
+Decisions are numbered **D1–D92**. Task specs cite them by number (e.g. "follow D35, D58").
 
 ## 1. Tech stack
 
@@ -18,7 +18,7 @@ Decisions are numbered **D1–D85**. Task specs cite them by number (e.g. "follo
 | Embeddings | `BAAI/bge-small-en-v1.5` via `sentence-transformers`, 384 dims, run locally | used by methods B and C only (D10) |
 | PDF | PyMuPDF (`pymupdf`) | Docling only if parse tests fail (D32) |
 | Agent orchestration | LangGraph (`langgraph`, `langgraph-checkpoint-postgres`) | orchestration only; worker loop is explicit nodes (D67) |
-| LLM | `openai` Python SDK, Responses API with strict function tools (D78) | behind our own `LLMClient` interface (D46) |
+| LLM | `openai` Python SDK, Responses API with strict function tools (D78); `google-genai` SDK, `generateContent` with function declarations (D90) | behind our own `LLMClient` interface (D46); provider chosen per model key |
 | Tracing | Langfuse (self-hosted in compose, optional profile) | D25 |
 | MCP | official `mcp` Python SDK, stdio transport | D13, D51 |
 | Config | `pydantic-settings`, `.env` (never committed) | |
@@ -34,8 +34,10 @@ Exact versions: latest stable at the time of T00, pinned in `uv.lock`. Do not ad
 |---|---|---|
 | `luna` | `gpt-6-luna` | development runs, trials, simple checks |
 | `sol` | `gpt-6.1-sol` | formal evaluation, comparison (experiment E5) |
+| `flash` | `gemini-3.8-flash` (Gemini, thinking `low`) | Gemini runs on Christy's Google credit (D90) |
+| `lite` | `gemini-3.5-flash-lite` (Gemini, thinking `minimal`) | cheap Gemini runs (D90) |
 
-Prices live in `config/models.yaml` (per million tokens: input / cached input / output) so cost accounting never hard-codes them.
+Prices live in `config/models.yaml` (per million tokens: input / cached input / output) so cost accounting never hard-codes them. Each entry names its `provider` (`openai` by default, or `gemini`); `make_llm` routes each call to that provider's adapter (D90).
 
 ## 2. Architecture
 
@@ -319,3 +321,6 @@ Full reasoning (Chinese) is in the owner's notes; this is the binding summary.
 | 87 | A run's settings (step cap, token cap, output tokens, tool timeout, seed, B top-k and score floor, LC scope and prompt cap, kept tool results) are stored on the run (`runs.settings`, NULL for older runs) and are what the worker uses, so every result says what produced it (note 13, items 58–59) |
 | 88 | When code ends a check as needs review although the model submitted a valid finding (cap hit, failed quotes, too few searches), the model's status is kept as `findings.proposed_status`; it is information, not a status |
 | 89 | Model responses are stored provider-neutrally in `llm_calls.response`; a replay client answers a new run from a recorded one by request fingerprint, for offline demos and free regression tests; any prompt or tool-result change shows as a miss |
+| 90 | Gemini is a second provider behind `LLMClient`: `provider` per model key; the SDK reads its own key or Vertex AI settings; thought signatures ride on `ToolCall` but stay out of fingerprints and stored responses; only the first function call is kept; 401 / 402 / 403 fail fast. Offline tests only until a real key is available |
+| 91 | A run stops (`failed` / `llm_unavailable`) after 3 checks in a row end with model retries exhausted; finished findings stay; no automatic resume (note 13, item 28; design 11.5 #16) |
+| 92 | Pages with no readable text are derived from stored units (no paragraph or table-row unit on that page) and shown on the pack, in the API and in exports; the parser is unchanged and the agent's tools are not told yet (note 13, items 3 and 49) |

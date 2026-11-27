@@ -68,6 +68,7 @@ Section numbers refer to `02-design.md`; D-numbers to its decision digest (§15)
 | T24 | Postgres `plainto_tsquery` / `tsquery` | §1, §6 | D35, D77 |
 | T25 | openai (Responses API) | §1, §7 | D46, D66, D78 |
 | T26 | pymupdf | §5 | D33, D52, D70 |
+| T31 | google-genai | §1, §7 | D46, D78, D89, D90 |
 | T20 | fastapi, sse-starlette | §11 | D24, D44, D50 |
 | T21 | langfuse | §1 | D25 |
 | T22 | mcp (Python SDK, stdio) | §12 | D13, D51 |
@@ -83,6 +84,17 @@ From note 13 step 4 and the 17 Nov design review: changes that need no design di
 | T28 | Keep the model's status as `proposed_status` when code overrides it to needs review | T11, T27 | normal | D12, D30, D58, D88 |
 | T29 | Store model responses; replay a recorded run without calling the model | T07, T12, T27 | normal | D46, D66, D89 |
 | T30 | Shorten old tool results in the agent's prompt (keep the newest 3) | T11, T27 | strict | D15, D59, D79 |
+
+## Phase 1c — no-cost work while the design discussion waits (27 Nov 2026, Claude Code, no OpenAI credits)
+
+Christy, 27 Nov: do everything that does not need her. The design items (check types, elements, evaluation by evidence location, U4 / U5 / X6) wait for the discussion. One PR each.
+
+| ID | Task | Depends on | Tier | Decisions |
+|---|---|---|---|---|
+| T31 | Gemini as a second model provider behind `LLMClient` | T07, T25, T29 | normal | D46, D90 |
+| T32 | Small fixes: compare keeps `proposed_status`, `run_eval --keep-tool-results`, API runs record settings when queued, tool events name their units | T13, T27, T28, T30 | normal | D87, D88 |
+| T33 | Show pages with no readable text (pack, API, exports) | T04, T20, U2 | normal | D92 |
+| T34 | Stop a run after 3 checks in a row fail with the model unavailable | T12, T14 | normal | D21, D91 |
 
 ## Phase 2 — UI and extras (Claude Code writes the code, no OpenAI credits)
 
