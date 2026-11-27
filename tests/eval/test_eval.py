@@ -381,6 +381,34 @@ def test_token_cap_argument(monkeypatch, tmp_path):
     assert exc.value.code != 0
 
 
+def test_keep_tool_results_argument(monkeypatch, tmp_path):
+    """T32: --keep-tool-results defaults to RunDeps' 3 and must be at least 1."""
+    from cda.eval import run_eval
+
+    p = run_eval.parser()
+    base = ["--pack", str(PACK), "--out", str(tmp_path)]
+    assert p.parse_args(base).keep_tool_results == 3
+    assert p.parse_args([*base, "--keep-tool-results", "2"]).keep_tool_results == 2
+
+    def fail(*args, **kwargs):
+        raise AssertionError("must not reach database or model")
+
+    monkeypatch.setattr(run_eval, "make_engine", fail)
+    with pytest.raises(SystemExit) as exc:
+        run_eval.main([*base, "--keep-tool-results", "0"])
+    assert exc.value.code != 0
+
+
+def test_report_keep_tool_results_line():
+    from cda.eval.report import render_report
+
+    results = report_fixture()
+    results["keep_tool_results"] = 3
+    assert "keep tool results" not in render_report(results)  # fixture has only LC
+    results["methods"]["A"] = results["methods"]["LC"]
+    assert "- keep tool results: 3" in render_report(results)
+
+
 def test_report_token_cap_line():
     from cda.eval.report import render_report
 

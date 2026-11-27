@@ -312,10 +312,14 @@ async def test_run_eval_records_settings(env, monkeypatch, tmp_path):
             "7",
             "--token-cap",
             "123456",
+            "--keep-tool-results",
+            "2",
         ]
     )
     results = await run_eval.evaluate(args)
     settings = results["methods"]["LC"][0]["settings"]
+    # T32: the flag reaches RunDeps, the stored settings and results.json.
+    assert settings["keep_tool_results"] == results["keep_tool_results"] == 2
     assert settings["lc_scope"] == "sustainability"
     assert (settings["step_cap"], settings["token_cap"]) == (7, 123456)
     engine = create_async_engine(url)

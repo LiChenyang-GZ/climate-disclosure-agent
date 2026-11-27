@@ -148,6 +148,39 @@ async def test_t3_ignored(run_env, case):
     assert not (await compare(run_env))[1]
 
 
+@pytest.mark.parametrize(
+    "status,stored,expected",
+    [
+        ("evidence_found", None, "evidence_found"),
+        ("partial_evidence", None, "partial_evidence"),
+        ("evidence_found", "partial_evidence", "partial_evidence"),
+    ],
+)
+async def test_compare_keeps_proposed_status(run_env, status, stored, expected):
+    """T32 / D88: a finding moved to needs review by compare keeps the model's status."""
+    fid, a, b = await setup(run_env, status=status)
+    if stored:
+        async with run_env[0].begin() as c:
+            await c.execute(update(Finding).where(Finding.id == fid).values(proposed_status=stored))
+    await fact(run_env, fid, a)
+    await fact(run_env, fid, b, 1.30, unit_name="kt", scope="Australian operations")
+    _, _, f = await compare(run_env)
+    assert f.status == "needs_review"
+    assert f.needs_review_reason == "possible_inconsistency"
+    assert f.proposed_status == expected
+    async with run_env[0].connect() as c:
+        detail = await c.scalar(select(AuditLog.detail).where(AuditLog.target == str(fid)))
+    assert detail["old_status"] == status
+
+
+async def test_compare_to_inconsistent_sets_no_proposed_status(run_env):
+    fid, a, b = await setup(run_env)
+    await fact(run_env, fid, a)
+    await fact(run_env, fid, b, 1.30, unit_name="kt")
+    _, _, f = await compare(run_env)
+    assert f.status == "inconsistent" and f.proposed_status is None
+
+
 @pytest.mark.parametrize("target", [False, True])
 async def test_t4(run_env, target):
     fid, a, b = await setup(run_env, "M3")

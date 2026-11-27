@@ -6,6 +6,7 @@ import pytest
 from mcp.shared.memory import create_connected_server_and_client_session
 from sqlalchemy import delete, insert, select, text, update
 
+from cda.agent.run_settings import RunSettings
 from cda.config import Settings
 from cda.db.models import AuditLog, Document, Evidence, Finding, Run, Team, Unit, User
 from cda.indexing.embed import HashEmbedder
@@ -153,6 +154,8 @@ async def test_creation_and_rest_parity(api, monkeypatch):
         assert row["status"] == "queued"
         assert Decimal(str(row["budget_usd"])) == 1  # MCP default (D86)
         assert row["check_set_version"] and row["prompt_sha256"]
+        # T32 / D87: the queued run already records its settings.
+        assert row["settings"] == RunSettings.defaults().model_dump(mode="json")
         assert notifications == [True]
         retry = data(await session.call_tool("start_check", args))
         assert retry["created"] is False and retry["run"]["id"] == row["id"]

@@ -591,3 +591,41 @@ async def test_proposed_status_null_on_invalid_output(harness):
     r, _ = await run(harness, [bad, bad])
     assert (r.status, r.needs_review_reason) == ("error", "invalid_output")
     assert r.proposed_status is None
+
+
+async def test_tool_events_name_their_units(harness, monkeypatch):
+    """T32: tool_called events carry the unit ids a tool returned, in order."""
+    import cda.agent.worker_graph as w
+    from cda.tools.envelope import bad_args
+
+    async def tool(ctx, name, args):
+        if name.endswith("search"):
+            if not ctx.coverage.record(name, args["query"], {"s", "r"}):
+                return bad_args("repeated query; try different terms or scope")
+            hits = ["u1", "u2", "u1"]
+            return found({"hits": [{"unit_id": u, "text": "t"} for u in hits]})
+        return found({"units": [{"unit_id": "u4"}, {"unit_id": UID}], "truncated": False})
+
+    monkeypatch.setattr(w, "run_tool", tool)
+    events = []
+
+    async def emit(run_id, check_id, kind, payload):
+        events.append((kind, payload))
+
+    d, _, c, cs = harness(
+        [
+            turn("keyword_search", {"query": "a"}),
+            turn("read_unit", {"unit_id": UID}),
+            turn("keyword_search", {"query": "a"}),
+            turn(),
+        ],
+        emit=emit,
+    )
+    await run_worker(d, c, cs)
+    calls = [p for k, p in events if k == "tool_called"]
+    assert [(p["tool"], p["unit_ids"]) for p in calls] == [
+        ("keyword_search", ["u1", "u2"]),
+        ("read_unit", ["u4", UID]),
+        ("keyword_search", []),
+    ]
+    assert calls[-1]["repeated"] is True

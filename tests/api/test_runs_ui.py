@@ -7,6 +7,7 @@ from pydantic import SecretStr
 from sqlalchemy import select, update
 from test_api import indexed, pack, pdf, upload
 
+from cda.agent.run_settings import RunSettings
 from cda.checks.loader import default_check_set
 from cda.db.models import Run
 from cda.tools.context import ToolContext
@@ -158,6 +159,21 @@ async def test_gemini_key_checked_for_gemini_models(api, settings_values, status
         }
     else:
         assert response.json()["model_key"] == "flash"
+
+
+async def test_queued_run_records_default_settings(api):
+    """T32 / D87: a run created through the API says what it will run with while queued."""
+    pid = await indexed(api)
+    settings = api[2].state.settings
+    settings.openai_api_key, settings.cda_fake_llm = SecretStr("sk-x"), False
+    response = await start(api, pid)
+    assert response.status_code == 201, response.text
+    assert response.json()["settings"] == RunSettings.defaults().model_dump(mode="json")
+    async with api[1].connect() as conn:
+        stored = await conn.scalar(
+            select(Run.settings).where(Run.id == UUID(response.json()["id"]))
+        )
+    assert stored == RunSettings.defaults().model_dump(mode="json")
 
 
 async def test_run_options(api):

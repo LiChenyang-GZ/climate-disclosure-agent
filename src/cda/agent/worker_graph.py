@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from cda.agent.budget import Budget
 from cda.agent.finding import SubmitFinding
-from cda.agent.history import shorten_history
+from cda.agent.history import shorten_history, unit_ids_of
 from cda.agent.hooks import EventSink, noop_sink
 from cda.agent.nosevidence import accept
 from cda.agent.prompts import render
@@ -261,6 +261,8 @@ def build_graph(
                 "part_ids": sorted(scope),
                 "category": s.tool_result.category,
                 "hits": len(data.get("hits", [])),
+                # T32: which units came back, so coverage by result can be measured later.
+                "unit_ids": unit_ids_of(data),
                 "repeated": "repeated query" in s.tool_result.model_dump_json(),
             },
         )
