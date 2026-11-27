@@ -27,6 +27,14 @@ class RunSettings(BaseModel):
         return cls(**{name: getattr(deps, name) for name in cls.model_fields})
 
     @classmethod
+    def defaults(cls) -> "RunSettings":
+        """The `RunDeps` defaults, recorded on runs queued by the API or MCP (D87)."""
+        from cda.agent.run_graph import RunDeps
+
+        fields = RunDeps.__dataclass_fields__
+        return cls.model_validate({name: fields[name].default for name in cls.model_fields})
+
+    @classmethod
     def resolve(cls, stored: dict[str, Any] | None, deps: "RunDeps") -> "RunSettings":
         """Stored keys win over the worker's defaults; raises ValidationError if invalid."""
         return cls.model_validate({**cls.from_deps(deps).model_dump(), **(stored or {})})

@@ -34,6 +34,13 @@ def _unit_ids(value: Any, out: list[str]) -> None:
             _unit_ids(child, out)
 
 
+def unit_ids_of(value: Any, limit: int = MAX_UNIT_IDS) -> list[str]:
+    """Unit ids in a tool result's data, in order, without repeats (T32 events)."""
+    out: list[str] = []
+    _unit_ids(value, out)
+    return out[:limit]
+
+
 def _arguments(call: ToolCall | None) -> Any:
     if call is None:
         return None

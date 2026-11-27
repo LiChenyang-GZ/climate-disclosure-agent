@@ -61,6 +61,12 @@ def render_report(results: dict[str, Any]) -> str:
         and {"A", "C"} & set(results.get("methods", {}))
     ):
         lines.append(f"- {label('token_cap')}: {results['token_cap']}")
+    if (
+        not retrieval_only
+        and "keep_tool_results" in results
+        and {"A", "C"} & set(results.get("methods", {}))
+    ):
+        lines.append(f"- {label('keep_tool_results')}: {results['keep_tool_results']}")
     runs = [r for rs in results.get("methods", {}).values() for r in rs]
     if not retrieval_only and runs and "always_found_baseline" in runs[0]:
         # Depends only on the answer key: what answering "found" everywhere would score.

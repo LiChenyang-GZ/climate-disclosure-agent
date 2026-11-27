@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql import Select
 
 from cda.agent.prompts import prompt_sha256
+from cda.agent.run_settings import RunSettings
 from cda.api.errors import APIError, run_errors
 from cda.checks.loader import default_check_set
 from cda.db.models import (
@@ -422,6 +423,8 @@ async def create_run(
                     prompt_sha256=prompt_sha256(),
                     created_by=actor["id"],
                     idempotency_key=idempotency_key,
+                    # D87: a queued run already says what it will run with.
+                    settings=RunSettings.defaults().model_dump(mode="json"),
                 )
                 .on_conflict_do_nothing(index_elements=["idempotency_key"])
                 .returning(Run)

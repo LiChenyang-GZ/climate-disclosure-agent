@@ -184,6 +184,7 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--lc-scope", choices=("pack", "sustainability"), default="pack")
     p.add_argument("--step-cap", type=int, default=RunDeps.step_cap)
     p.add_argument("--token-cap", type=int, default=RunDeps.token_cap)
+    p.add_argument("--keep-tool-results", type=int, default=RunDeps.keep_tool_results)
     p.add_argument("--yes", action="store_true")
     return p
 
@@ -223,6 +224,7 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
         "lc_scope": args.lc_scope,
         "step_cap": args.step_cap,
         "token_cap": args.token_cap,
+        "keep_tool_results": args.keep_tool_results,
         "methods": {},
         "changes": [c.model_dump(mode="json") for c in key.changes],
     }
@@ -256,6 +258,7 @@ async def evaluate(args: argparse.Namespace) -> dict[str, Any]:
                     lc_scope=args.lc_scope,
                     step_cap=args.step_cap,
                     token_cap=args.token_cap,
+                    keep_tool_results=args.keep_tool_results,
                 )
                 for method in args.methods.split(","):
                     for _ in range(args.repeats):
@@ -318,6 +321,8 @@ def main(argv: list[str] | None = None) -> None:
         p.error("step cap must be at least 2")
     if args.token_cap < 1:
         p.error("token cap must be positive")
+    if args.keep_tool_results < 1:
+        p.error("keep tool results must be at least 1")
     if not methods or any(m not in ("A", "B", "C", "LC") for m in methods):
         p.error("unknown method")
     spend = (

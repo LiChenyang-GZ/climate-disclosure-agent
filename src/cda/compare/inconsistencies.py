@@ -266,16 +266,17 @@ async def compare_run(conn: AsyncConnection, run_id: UUID) -> list[UUID]:
         old = findings[fid]["status"]
         if old == status:
             continue
-        await conn.execute(
-            update(Finding)
-            .where(Finding.id == fid)
-            .values(
-                status=status,
-                needs_review_reason=reason,
-                version=Finding.version + 1,
-                updated_at=func.now(),
-            )
-        )
+        values: dict[str, Any] = {
+            "status": status,
+            "needs_review_reason": reason,
+            "version": Finding.version + 1,
+            "updated_at": func.now(),
+        }
+        # D88: keep the model's status when code moves it to needs review; `request`
+        # only allows that from a status the model can submit.
+        if status == "needs_review" and findings[fid].get("proposed_status") is None:
+            values["proposed_status"] = old
+        await conn.execute(update(Finding).where(Finding.id == fid).values(**values))
         await conn.execute(
             insert(AuditLog).values(
                 actor="system",
