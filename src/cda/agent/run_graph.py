@@ -57,6 +57,10 @@ class RunDeps:
     reraise: tuple[type[BaseException], ...] = ()
 
 
+# D91: this many checks in a row ending with the model unavailable stop the run.
+OUTAGE_LIMIT = 3
+
+
 class RunState(TypedDict, total=False):
     check_ids: list[str]
     check_id: str
@@ -117,6 +121,8 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
     lc_pack: LongContextPack | None = None
     lc_pack_loaded = False
     lc_pack_lock = asyncio.Lock()
+    # D91: checks that ended with the model service unavailable, in a row (finish order).
+    outage = 0
 
     async def start(state: RunState) -> RunState:
         async with engine.begin() as conn:
@@ -180,7 +186,7 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
         }
 
     async def check_worker(state: RunState) -> RunState:
-        nonlocal lc_pack, lc_pack_loaded
+        nonlocal lc_pack, lc_pack_loaded, outage
         cid = state["check_id"]
         async with engine.begin() as conn:
             if (
@@ -288,6 +294,15 @@ async def run_run(engine: AsyncEngine, run_id: UUID, *, deps: RunDeps) -> RunSta
                     result.needs_review_reason = "cancelled"
             await store_finding(conn, run_id, result)
         await deps.emit(run_id, cid, "check_finished", {"status": result.status})
+        outage = (
+            outage + 1
+            if result.status == "error" and result.needs_review_reason == "llm_unavailable"
+            else 0
+        )
+        if outage >= OUTAGE_LIMIT and await _status(engine, run_id) == "running":
+            # D91: stop instead of letting every remaining check fail the same way.
+            await _fail(engine, run_id, "llm_unavailable")
+            await deps.emit(run_id, None, "run_failed", {"error": "llm_unavailable"})
         return {}
 
     async def compare(state: RunState) -> RunState:
