@@ -1,7 +1,7 @@
 # Requirements
 
 ## What it is
-Climate Disclosure Agent locates evidence for Australian mandatory climate disclosure requirements in a listed company's reports. A reviewer uploads a company's **sustainability report** and **annual report**; the system checks them against **15 checks** (11 from AASB S2, 4 from ASIC's 2026 review findings), cites every piece of evidence down to file, page and paragraph, flags **inconsistencies between the two reports**, and hands uncertain items to a human.
+Climate Disclosure Agent locates evidence for Australian mandatory climate disclosure requirements in a listed company's reports. A reviewer uploads a company's **annual report** (its sustainability report is usually a section of it, marked as a PDF page range, D69) and any supplementary documents; the system checks them against **15 checks** (11 from AASB S2, 4 from ASIC's 2026 review findings), cites every piece of evidence down to file, page and paragraph, flags **inconsistencies between the annual report and the sustainability report**, and hands uncertain items to a human.
 
 It locates evidence to support review. It never states that a company is or is not compliant.
 
