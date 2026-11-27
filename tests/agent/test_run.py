@@ -36,7 +36,7 @@ from cda.db.models import (
 from cda.indexing.embed import HashEmbedder
 from cda.llm.cost import ModelTable
 from cda.llm.fake import FakeLLM, FakeTurn
-from cda.llm.types import LLMAuthError, Usage
+from cda.llm.types import LLMAuthError, LLMRetryExhausted, Usage
 
 pytestmark = pytest.mark.db
 
@@ -483,6 +483,74 @@ async def test_auth_stops_run(run_env):
     assert await execute(run_env) == "failed"
     assert (await row(run_env)).error == "llm_auth"
     assert set(run_env[3].calls) == {"G1"}
+
+
+def capture_events(env):
+    events = []
+
+    async def emit(rid, cid, kind, payload):
+        events.append((cid, kind, payload))
+
+    env[2].emit = emit
+    return events
+
+
+async def test_outage_stops_run_after_three_checks(run_env):
+    """D91: three checks in a row ending llm_unavailable fail the run."""
+    run_env[2].max_concurrency = 1
+    for check in load_check_set().checks:
+        run_env[3].errors[check.id] = LLMRetryExhausted(503, "ServerError")
+    events = capture_events(run_env)
+    assert await execute(run_env) == "failed"
+    r = await row(run_env)
+    assert r.error == "llm_unavailable" and r.finished_at
+    stored = await findings(run_env)
+    assert len(stored) == 3
+    assert {(f.status, f.needs_review_reason) for f in stored} == {("error", "llm_unavailable")}
+    assert set(run_env[3].calls) == {f.check_id for f in stored}
+    assert [p for c, k, p in events if k == "run_failed"] == [{"error": "llm_unavailable"}]
+
+
+async def test_outage_with_concurrency_stops_early(run_env):
+    for check in load_check_set().checks:
+        run_env[3].errors[check.id] = LLMRetryExhausted(503, "ServerError")
+    assert await execute(run_env) == "failed"
+    assert (await row(run_env)).error == "llm_unavailable"
+    # Five run at once; after the third failure no new check calls the model.
+    assert 3 <= len(run_env[3].calls) <= 7
+    assert len(await findings(run_env)) <= 7
+
+
+async def test_outage_count_resets_after_a_success(run_env):
+    run_env[2].max_concurrency = 1
+    order = [c.id for c in load_check_set().checks]
+    for cid in (order[0], order[1], order[3], order[4], order[6], order[7]):
+        run_env[3].errors[cid] = LLMRetryExhausted(503, "ServerError")
+    assert await execute(run_env) != "failed"
+    assert len(await findings(run_env)) == 15
+
+
+class DownLLM:
+    def __init__(self):
+        self.calls = 0
+
+    async def complete(self, **kw):
+        self.calls += 1
+        raise LLMRetryExhausted(429, "RateLimitError")
+
+
+@pytest.mark.parametrize("method", ["B", "LC"])
+async def test_outage_stops_single_call_methods(run_env, method):
+    """B and LC report retries exhausted as llm_unavailable, so the run stops too."""
+    await change(run_env, method=method)
+    run_env[2].max_concurrency = 1
+    llm = DownLLM()
+    run_env[2].llm = llm
+    assert await execute(run_env) == "failed"
+    assert (await row(run_env)).error == "llm_unavailable"
+    stored = await findings(run_env)
+    assert len(stored) == llm.calls == 3
+    assert {(f.status, f.needs_review_reason) for f in stored} == {("error", "llm_unavailable")}
 
 
 async def test_crash_resume(run_env):

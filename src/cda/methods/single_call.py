@@ -14,7 +14,14 @@ from cda.checks.models import Check
 from cda.llm.calls import record_call
 from cda.llm.client import parse_tool_call
 from cda.llm.cost import cost_usd, estimate_tokens, max_cost_usd
-from cda.llm.types import LLMAuthError, Message, ToolArgsError, ToolCall, ToolSpec
+from cda.llm.types import (
+    LLMAuthError,
+    LLMRetryExhausted,
+    Message,
+    ToolArgsError,
+    ToolCall,
+    ToolSpec,
+)
 from cda.tools.context import ToolContext
 from cda.verify.evidence import EvidenceItem, verify_evidence
 
@@ -74,6 +81,11 @@ async def run_single_call(
     except LLMAuthError:
         await deps.budget.settle(estimate, Decimal(0))
         raise
+    except LLMRetryExhausted:
+        # D91: an unavailable model service, not a bad answer; counted by the run.
+        await deps.budget.settle(estimate, Decimal(0))
+        state.error_detail = "Model service unavailable"
+        return finish("error", "llm_unavailable")
     except Exception as exc:  # noqa: BLE001 - single-call failures are invalid_output
         await deps.budget.settle(estimate, Decimal(0))
         # Type only: request errors can echo prompt or response text.
