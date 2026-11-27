@@ -217,6 +217,24 @@ test.describe("Parse (PRD 6.3, 9.1 #3)", () => {
 });
 
 test.describe("Documents (PRD 6.3)", () => {
+  test("says which pages have no readable text (D92)", async ({ page }) => {
+    await openPack(page, {
+      documents: [
+        doc({ pages_without_text: [1, 12, 13, 14, 39] }),
+        doc({ id: "doc-2", filename: "notes.docx", kind: "other", page_count: 3, parts: [], pages_without_text: [2] }),
+        doc({ id: "doc-3", filename: "supplement.pdf", kind: "other", parts: [], pages_without_text: [] }),
+      ],
+    });
+    const rows = page.getByTestId("document-row");
+    await expect(rows.nth(0).getByTestId("pages-without-text")).toHaveText(
+      "No readable text on PDF pages 1, 12–14, 39",
+    );
+    await expect(rows.nth(1).getByTestId("pages-without-text")).toHaveText(
+      "No readable text on section 2",
+    );
+    await expect(rows.nth(2).getByTestId("pages-without-text")).toHaveCount(0);
+  });
+
   test("delete asks for confirmation and removes the row", async ({ page }) => {
     let deleted = false;
     await mockApi(page, {

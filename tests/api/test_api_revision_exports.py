@@ -50,7 +50,15 @@ async def test_markdown_report_golden(monkeypatch, final):
     monkeypatch.setattr(export.deps, "visible_pack", pack)
     monkeypatch.setattr(export, "finding_rows", rows)
     monkeypatch.setattr(export, "finding_detail", detail)
+
+    async def unreadable(*args):
+        return [
+            {"document": "annual.pdf", "pages_without_text": [1, 12, 13, 14]},
+            {"document": "supplement.pdf", "pages_without_text": []},
+        ]
+
     monkeypatch.setattr(export, "date", FixedDate, raising=False)
+    monkeypatch.setattr(export, "unreadable_pages", unreadable)
     response = await export.export_response(
         None,
         {},

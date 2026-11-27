@@ -118,6 +118,30 @@ export function pagesLabel(filename: string, count: number): string {
   return String(count);
 }
 
+/** Compact page list: [3, 7, 12, 13, 14] -> "3, 7, 12–14". */
+export function pageRanges(pages: number[]): string {
+  const spans: [number, number][] = [];
+  for (const page of [...pages].sort((a, b) => a - b)) {
+    const last = spans[spans.length - 1];
+    if (last && page === last[1] + 1) last[1] = page;
+    else spans.push([page, page]);
+  }
+  return spans.map(([a, b]) => (a === b ? String(a) : `${a}–${b}`)).join(", ");
+}
+
+/** D92: "No readable text on PDF pages 1, 207" (sections / sheets for Office files). */
+export function unreadableLabel(filename: string, pages: number[]): string | null {
+  if (pages.length === 0) return null;
+  const name = filename.toLowerCase();
+  const plural = pages.length === 1 ? "" : "s";
+  const what = name.endsWith(".docx")
+    ? `section${plural}`
+    : name.endsWith(".xlsx")
+      ? `sheet${plural}`
+      : `PDF page${plural}`;
+  return `No readable text on ${what} ${pageRanges(pages)}`;
+}
+
 /** Source column (X2): "SharePoint · /Drafts/report.pdf" for imported files, else "Upload". */
 export function sourceLabel(source: { provider: string; path: string } | null | undefined): string {
   if (!source) return "Upload";

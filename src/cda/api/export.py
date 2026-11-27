@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse, Response
 from cda.api import deps
 from cda.api.deps import Actor, Conn
 from cda.api.routes.findings import finding_detail, finding_rows
+from cda.api.service import page_ranges, unreadable_pages
 from cda.llm.cost import ModelTable
 
 _ESCAPE = re.compile(r"([\\`*_{}\[\]()#+\-.!|<>])")
@@ -83,7 +84,8 @@ async def export_response(
             row["review_note"] = "\n".join(r["note"] for r in detail["reviews"])
         else:
             row["evidence"], row["review_note"] = [], ""
-    data = jsonable_encoder({"header": header, "findings": rows})
+    documents = await unreadable_pages(conn, actor, run["pack_id"])
+    data = jsonable_encoder({"header": header, "documents": documents, "findings": rows})
     if format == "json":
         return JSONResponse(data)
     if format == "md":
@@ -95,8 +97,15 @@ async def export_response(
             f"**Model:** {run['model_key']} ({model}) \u00b7 "
             f"**Check set:** {run['check_set_version']} \u00b7 "
             f"**Prompt:** {run['prompt_sha256'][:12]} \u00b7 **Exported:** {date.today().isoformat()}\n"
-            f"{settings_line(run)}\n\n"
-            "| Check | Title | Status | Relief | Evidence | Review |\n"
+            f"{settings_line(run)}\n"
+            + "".join(
+                # D92: say which pages could not be read at all.
+                f"Pages with no readable text in {markdown(d['document'])}: "
+                f"{page_ranges(d['pages_without_text'])}\n"
+                for d in documents
+                if d["pages_without_text"]
+            )
+            + "\n| Check | Title | Status | Relief | Evidence | Review |\n"
             "|---|---|---|---|---|---|\n"
         )
         for row in rows:
