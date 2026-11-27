@@ -8,7 +8,7 @@ import { ApiError, api, type Method, type RunDetail, type RunOptions } from "@/l
 import { METHOD, usd } from "@/lib/format";
 
 type Failure =
-  | { kind: "key" }
+  | { kind: "key"; message: string }
   | { kind: "active"; runId: string | null }
   | { kind: "network" }
   | { kind: "server" }
@@ -101,7 +101,7 @@ export function NewCheckDialog({ packId, onClose }: { packId: string; onClose: (
       router.push(`/runs/${run.id}`);
     } catch (error) {
       if (error instanceof ApiError && error.code === "llm_key_missing") {
-        setFailure({ kind: "key" });
+        setFailure({ kind: "key", message: error.message });
       } else if (error instanceof ApiError && error.code === "run_active") {
         const runId = typeof error.body.run_id === "string" ? error.body.run_id : null;
         setFailure({ kind: "active", runId });
@@ -135,7 +135,7 @@ export function NewCheckDialog({ packId, onClose }: { packId: string; onClose: (
 
         {failure?.kind === "key" && (
           <p role="alert" className="rounded bg-red-50 p-2 text-sm text-red-900">
-            OpenAI API key isn&apos;t set. Add OPENAI_API_KEY to .env and restart the backend.
+            {failure.message || "The model provider's API key isn't set. Add it to .env and restart the backend."}
           </p>
         )}
         {failure?.kind === "active" && (

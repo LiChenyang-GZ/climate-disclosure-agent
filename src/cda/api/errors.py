@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
 
 _RUN_MESSAGES = {
-    "llm_auth": "The OpenAI API key is missing or was rejected.",
+    "llm_auth": "The model provider's API key is missing or was rejected.",
     "prompt_changed": "The prompt changed since this run was created. Start a new run.",
     "check_set_changed": "The check set changed since this run was created. Start a new run.",
     "method_not_supported": "The selected method is not supported by the worker.",

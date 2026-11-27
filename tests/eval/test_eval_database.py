@@ -293,7 +293,7 @@ async def test_run_eval_records_settings(env, monkeypatch, tmp_path):
             return await FakeLLM([turn], ModelTable.load()).complete(**kw)
 
     monkeypatch.setenv("CDA_DATABASE_URL", url)
-    monkeypatch.setattr(run_eval, "OpenAIClient", lambda models: SubmitFake())
+    monkeypatch.setattr(run_eval, "make_llm", lambda models: SubmitFake())
     args = run_eval.parser().parse_args(
         [
             "--pack",

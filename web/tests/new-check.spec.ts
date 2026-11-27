@@ -174,7 +174,10 @@ test.describe("New check dialog (PRD 6.4, 9.1 #4)", () => {
     await openPack(page, {}, {
       "POST /runs": () => ({
         status: 409,
-        json: { error: "llm_key_missing", message: "OpenAI API key isn't set" },
+        json: {
+          error: "llm_key_missing",
+          message: "OpenAI API key isn't set. Add OPENAI_API_KEY to .env and restart the backend.",
+        },
       }),
     });
     const dialog = await openDialog(page);

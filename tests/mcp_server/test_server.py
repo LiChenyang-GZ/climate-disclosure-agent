@@ -200,5 +200,37 @@ async def test_start_check_needs_llm_key(monkeypatch, fake):
         # The fake model counts as ready (D83); the request reaches the database.
         assert error["error"] == "not_found" and opened == [True]
     else:
-        assert error == {"error": "llm_key_missing", "message": "OpenAI API key isn't set"}
+        assert error == {
+            "error": "llm_key_missing",
+            "message": "OpenAI API key isn't set. Add OPENAI_API_KEY to .env and restart the "
+            "backend.",
+        }
         assert opened == []
+
+
+async def test_start_check_checks_the_models_provider_key(monkeypatch):
+    """D90: a Gemini model needs a Gemini key even when an OpenAI key is set."""
+    monkeypatch.setenv("CDA_MCP_USER", "sarah")
+
+    class Engine:
+        async def dispose(self):
+            pass
+
+    settings = Settings(
+        _env_file=None,
+        openai_api_key="sk-test",
+        gemini_api_key=None,
+        google_api_key=None,
+        google_genai_use_vertexai=False,
+    )
+    args = {"pack_id": str(uuid4()), "method": "A", "model_key": "flash", "idempotency_key": "x"}
+    async with create_connected_server_and_client_session(
+        build_server(engine=Engine(), settings=settings)
+    ) as session:
+        result = await session.call_tool("start_check", args)
+    assert result.isError
+    assert json.loads(result.content[0].text) == {
+        "error": "llm_key_missing",
+        "message": "Gemini API key isn't set. Add GEMINI_API_KEY (or the Vertex AI settings) "
+        "to .env and restart the backend.",
+    }

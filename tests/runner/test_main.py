@@ -3,7 +3,7 @@ import logging
 from langgraph.checkpoint.memory import InMemorySaver
 
 from cda.config import Settings
-from cda.llm.openai_client import OpenAIClient
+from cda.llm.providers import ProviderRouter
 from cda.runner import main as worker
 from cda.runner.deps import build_run_deps
 
@@ -13,7 +13,7 @@ def test_build_run_deps_without_api_key(monkeypatch):
     deps = build_run_deps(
         Settings(database_url="postgresql+asyncpg://localhost/cda_test"), InMemorySaver()
     )
-    assert isinstance(deps.llm, OpenAIClient)
+    assert isinstance(deps.llm, ProviderRouter)
 
 
 def test_main_signal_stop(monkeypatch, caplog):

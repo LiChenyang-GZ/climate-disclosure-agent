@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, RootModel
+from pydantic import BaseModel, ConfigDict, Field, RootModel, model_validator
 
 from cda.llm.schema import strict_tool_schema
 from cda.llm.types import Message, ToolSpec, Usage
@@ -16,12 +16,24 @@ from cda.llm.types import Message, ToolSpec, Usage
 class ModelPrice(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
     model: str
+    # D90: which adapter serves this key.
+    provider: Literal["openai", "gemini"] = "openai"
     input: Decimal = Field(ge=0, allow_inf_nan=False)
     cached_input: Decimal = Field(ge=0, allow_inf_nan=False)
     output: Decimal = Field(ge=0, allow_inf_nan=False)
     # Sent as reasoning_effort when set. gpt-6-luna only accepts function tools on Chat
     # Completions with reasoning turned off ("none").
     reasoning_effort: Literal["none", "low", "medium", "high", "xhigh"] | None = None
+    # Gemini only: sent as thinking_config.thinking_level.
+    thinking_level: Literal["minimal", "low", "medium", "high", "xhigh"] | None = None
+
+    @model_validator(mode="after")
+    def _provider_options(self) -> "ModelPrice":
+        if self.provider == "openai" and self.thinking_level is not None:
+            raise ValueError("thinking_level is for Gemini models")
+        if self.provider == "gemini" and self.reasoning_effort is not None:
+            raise ValueError("reasoning_effort is for OpenAI models")
+        return self
 
 
 class ModelTable(RootModel[dict[str, ModelPrice]]):

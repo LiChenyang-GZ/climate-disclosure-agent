@@ -92,7 +92,7 @@ def test_safe_run_error_codes(stored, expected):
     if expected is None:
         assert result["error_message"] is None
     elif expected == "llm_auth":
-        assert result["error_message"] == "The OpenAI API key is missing or was rejected."
+        assert result["error_message"] == "The model provider's API key is missing or was rejected."
     else:
         assert result["error_message"]
 

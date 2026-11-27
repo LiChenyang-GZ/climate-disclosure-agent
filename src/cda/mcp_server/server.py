@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from cda.api import service
 from cda.api.errors import APIError
-from cda.config import Settings
+from cda.config import KEY_MISSING, Settings, provider_of
 from cda.db.session import make_engine
 from cda.indexing.embed import BgeEmbedder, Embedder
 from cda.tools import registry
@@ -142,8 +142,9 @@ def build_server(
             Decimal, Field(gt=0, le=MAX_BUDGET_USD, decimal_places=6, allow_inf_nan=False)
         ] = MAX_BUDGET_USD,
     ) -> dict[str, Any]:
-        if not current_settings().llm_ready:
-            raise APIError(409, "llm_key_missing", "OpenAI API key isn't set")
+        provider = provider_of(model_key)
+        if not current_settings().llm_ready_for(provider):
+            raise APIError(409, "llm_key_missing", KEY_MISSING[provider])
         body = service.RunInput(
             pack_id=pack_id, method=method, model_key=model_key, budget_usd=budget_usd
         )

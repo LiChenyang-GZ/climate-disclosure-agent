@@ -14,7 +14,7 @@ from cda.indexing.embed import BgeEmbedder
 from cda.llm.client import LLMClient
 from cda.llm.cost import ModelTable
 from cda.llm.fake import DemoFakeLLM
-from cda.llm.openai_client import OpenAIClient
+from cda.llm.providers import make_llm
 from cda.runner.events import EventSink
 
 logger = logging.getLogger(__name__)
@@ -30,10 +30,10 @@ def build_run_deps(settings: Settings, checkpointer: BaseCheckpointSaver[Any]) -
     else:
         comparer = getattr(module, "compare_run", noop_comparer)
     models = ModelTable.load()
-    llm: LLMClient = OpenAIClient(models)
+    llm: LLMClient = make_llm(models)
     if settings.cda_fake_llm:
         # D83: local smoke and tests only; results are not real findings.
-        logger.warning("CDA_FAKE_LLM is on: using fake LLM, no OpenAI calls")
+        logger.warning("CDA_FAKE_LLM is on: using fake LLM, no model provider calls")
         llm = DemoFakeLLM(models, delay_s=0.5)
     return RunDeps(
         llm=llm,
