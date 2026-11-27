@@ -1,6 +1,7 @@
 # Climate disclosure evidence report — Example \*Energy\* 2026
 **Status:** Draft · **Method:** A · **Model:** luna (gpt-6-luna) · **Check set:** 2026.10.1 · **Prompt:** abcdef012345 · **Exported:** 2026-10-26
 **Settings:** step cap 20 · token cap 300,000
+Pages with no readable text in annual\.pdf: 1, 12–14
 
 | Check | Title | Status | Relief | Evidence | Review |
 |---|---|---|---|---|---|

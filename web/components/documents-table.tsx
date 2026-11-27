@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { ApiError, api, type PackDetail, type PackDocument } from "@/lib/api";
-import { INDEX_STATUS, KIND, isPdf, pagesLabel, sourceLabel } from "@/lib/format";
+import { INDEX_STATUS, KIND, isPdf, pagesLabel, sourceLabel, unreadableLabel } from "@/lib/format";
 import { type PageRange, rangeError, withSustainabilityPart } from "@/lib/upload";
 
 export function DocumentsTable({
@@ -41,9 +41,17 @@ export function DocumentsTable({
         <tbody>
           {pack.documents.map((doc) => {
             const part = doc.parts.find((p) => p.kind === "sustainability");
+            const unreadable = unreadableLabel(doc.filename, doc.pages_without_text ?? []);
             return (
               <tr key={doc.id} data-testid="document-row" className="border-t border-slate-200 align-top">
-                <td className="px-4 py-2 font-medium">{doc.filename}</td>
+                <td className="px-4 py-2">
+                  <span className="font-medium">{doc.filename}</span>
+                  {unreadable && (
+                    <p data-testid="pages-without-text" className="mt-1 text-xs text-amber-800">
+                      {unreadable}
+                    </p>
+                  )}
+                </td>
                 <td className="px-4 py-2">{KIND[doc.kind]}</td>
                 <td className="px-4 py-2 break-all text-slate-600">{sourceLabel(doc.source)}</td>
                 <td className="px-4 py-2">{pagesLabel(doc.filename, doc.page_count)}</td>

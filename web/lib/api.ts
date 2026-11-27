@@ -105,6 +105,8 @@ export interface PackDocument {
   kind: DocumentKind;
   page_count: number;
   unit_count: number;
+  /** D92: pages (sections / sheets) with no paragraph or table row. */
+  pages_without_text?: number[];
   index_status: IndexStatus;
   parts: Part[];
   source?: DocumentSource | null;

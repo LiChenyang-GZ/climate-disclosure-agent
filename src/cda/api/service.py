@@ -208,6 +208,19 @@ async def document_info(
             ).where(Document.id == did, Unit.kind.in_(["paragraph", "table_row"]))
         )
     ).scalar_one()
+    with_text = set(
+        (
+            await conn.execute(
+                visible(
+                    select(Unit.pdf_page)
+                    .distinct()
+                    .join(Document, Document.id == Unit.document_id)
+                    .join(Pack, Pack.id == Document.pack_id),
+                    actor["id"],
+                ).where(Document.id == did, Unit.kind.in_(["paragraph", "table_row"]))
+            )
+        ).scalars()
+    )
     state = index_state.document_states.get(did)
     if row["pack_id"] in index_state.indexing:
         status = "indexing"
@@ -222,7 +235,62 @@ async def document_info(
         "parts": [dict(p) for p in parts],
         "index_status": status,
         "unit_count": units,
+        # D92: pages (sections / sheets for Office files) with no paragraph or table row.
+        "pages_without_text": pages_without_text(row["page_count"], with_text),
     }
+
+
+async def unreadable_pages(
+    conn: AsyncConnection, actor: dict[str, Any], pack_id: UUID
+) -> list[dict[str, Any]]:
+    """D92: per live document of a pack, the pages with no readable text (for exports)."""
+    docs = (
+        await conn.execute(
+            visible(
+                select(Document.id, Document.filename, Document.page_count).join(
+                    Pack, Pack.id == Document.pack_id
+                ),
+                actor["id"],
+            )
+            .where(Document.pack_id == pack_id, Document.deleted_at.is_(None))
+            .order_by(Document.filename, Document.id)
+        )
+    ).all()
+    pages: dict[UUID, set[int]] = {d.id: set() for d in docs}
+    if docs:
+        for did, page in (
+            await conn.execute(
+                select(Unit.document_id, Unit.pdf_page)
+                .distinct()
+                .where(
+                    Unit.document_id.in_(list(pages)),
+                    Unit.kind.in_(["paragraph", "table_row"]),
+                )
+            )
+        ).all():
+            pages[did].add(page)
+    return [
+        {
+            "document": d.filename,
+            "pages_without_text": pages_without_text(d.page_count, pages[d.id]),
+        }
+        for d in docs
+    ]
+
+
+def pages_without_text(page_count: int, with_text: set[int]) -> list[int]:
+    return [page for page in range(1, page_count + 1) if page not in with_text]
+
+
+def page_ranges(pages: list[int]) -> str:
+    """Compact page list for people: [3, 7, 12, 13, 14] -> "3, 7, 12–14"."""
+    spans: list[list[int]] = []
+    for page in sorted(pages):
+        if spans and page == spans[-1][1] + 1:
+            spans[-1][1] = page
+        else:
+            spans.append([page, page])
+    return ", ".join(str(a) if a == b else f"{a}–{b}" for a, b in spans)
 
 
 def pack_status(index_statuses: list[str]) -> str:
